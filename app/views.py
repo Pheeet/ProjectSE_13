@@ -6,6 +6,7 @@ from flask import (jsonify, render_template,
 
 from app import app
 
+from app.forms import forms
 
 @app.route('/lab03/comments/')
 def lab03_comments():
@@ -63,12 +64,32 @@ def data():
 
     return jsonify(d)
 
+@app.route('/lab06/', methods=('GET', 'POST'))
+def lab06_index():
+    form = forms.CourseForm()
+    if form.validate_on_submit():
+        raw_json = read_file('data/course_list.json')
+        course_list = json.loads(raw_json)
+        course_list.append({'title': form.title.data,
+                            'description': form.description.data,
+                            'price': form.price.data,
+                            'available': form.available.data,
+                            'level': form.level.data
+                            })
+        write_file('data/course_list.json',
+                   json.dumps(course_list, indent=4))
+        return redirect(url_for('lab06_courses'))
+    return render_template('lab06/index.html', form=form)
 
 def read_file(filename, mode="rt"):
     with open(filename, mode, encoding='utf-8') as fin:
         return fin.read()
 
-
+@app.route('/lab06/courses/')
+def lab06_courses():
+    raw_json = read_file('data/course_list.json')
+    course_list = json.loads(raw_json)
+    return render_template('lab06/courses.html', course_list=course_list)
 
 
 def write_file(filename, contents, mode="wt"):
