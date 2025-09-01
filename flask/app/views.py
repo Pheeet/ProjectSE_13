@@ -6,8 +6,8 @@ from flask import (jsonify, render_template,
 from sqlalchemy.sql import text
 from app import app
 from app import db
-from app.models.contact import Contact
-
+from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
+    ProjectSupervisor, ProjectCategory, ProjectFileType, Admin, ProjectStudent, ProjectDegree
 
 
 @app.route('/')
