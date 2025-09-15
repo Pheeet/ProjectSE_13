@@ -1,6 +1,6 @@
 import json
 from flask import (jsonify, render_template,
-                   request, url_for, flash, redirect)
+                   request, url_for, flash, redirect, Response)
 
 
 from sqlalchemy.sql import text
@@ -27,6 +27,29 @@ def db_connection():
     except Exception as e:
         return '<h1>db is broken.</h1>' + str(e)
 
+
+@app.route('/api/projects')
+def get_projects():
+    projects = Project.query.order_by(Project.projectID, Project.project_name).all()
+    data = []
+
+    for p in projects:
+        data.append({
+            'projectID': p.projectID,
+            'project_name': p.project_name,
+            'view': p.view,
+            'year': p.year,
+            'expire_after': p.expire_after.isoformat() if p.expire_after else None,
+            'file_path': p.file_path,
+            # ความสัมพันธ์
+            'students': [{'stu_id': s.stu_id, 'firstname': s.firstname, 'lastname': s.lastname} for s in p.students],
+            'degrees': [d.degree for d in p.degrees],
+            'supervisors': [s.name for s in p.supervisors],
+            'categories': [c.categoryName for c in p.categories],
+            'filetypes': [f.file_type for f in p.filetypes]
+        })
+
+    return Response(json.dumps(data, ensure_ascii=False, indent=4), mimetype='application/json')
 
 @app.route('/lab04')
 def lab04_bootstrap():
