@@ -113,6 +113,12 @@ def seed_db():
         ),
     ]
     db.session.add_all(projects)
+
+    admins = [
+        Admin(role="admin", email="admin@example.com"),
+        Admin(role="super_admin", email="super_admin@example.com")
+    ]
+    db.session.add_all(admin)
     db.session.commit()
 
     # เชื่อม Project กับ Student
@@ -174,3 +180,4 @@ def seed_db():
 if __name__ == "__main__":
 
     cli()
+
