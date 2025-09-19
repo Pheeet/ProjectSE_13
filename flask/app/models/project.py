@@ -18,6 +18,7 @@ class Project(db.Model, SerializerMixin):
     __tablename__ = "project"
     projectID   = db.Column('projectid', db.Integer, primary_key=True, autoincrement=True)
     project_name = db.Column('project_name', db.String(200), nullable=False)
+    description = db.Column('description', db.Text)
     view         = db.Column('view', db.Integer, default=0)
     expire_after = db.Column('expire_after', db.Date)
     year         = db.Column('year', db.Integer)
@@ -74,4 +75,5 @@ class ProjectStudent(db.Model, SerializerMixin):
 class ProjectDegree(db.Model, SerializerMixin):
     __tablename__ = "project_degree"
     projectID = db.Column('projectid', db.Integer, db.ForeignKey('project.projectid'), primary_key=True)
+
     degreeID  = db.Column('degreeid', db.Integer, db.ForeignKey('degree.degreeid'), primary_key=True)
