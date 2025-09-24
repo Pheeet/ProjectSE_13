@@ -9,14 +9,9 @@ from app import db
 from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
     ProjectSupervisor, ProjectCategory, ProjectFileType, Admin, ProjectStudent, ProjectDegree
 
-
 @app.route('/')
 def home():
     return "Flask says 'Hello world!'"
-
-@app.route('/crash')
-def crash():
-    return 1/0
 
 @app.route('/db')
 def db_connection():
@@ -27,145 +22,47 @@ def db_connection():
     except Exception as e:
         return '<h1>db is broken.</h1>' + str(e)
 
+@app.route('/api/projects', methods=['POST'])
+def query_projects():
+    data = request.json or {}
+    query = Project.query
 
-@app.route('/api/projects')
-def get_projects():
-    projects = Project.query.order_by(Project.projectID, Project.project_name).all()
-    data = []
+    #filter
+    if "project_name" in data:
+        query = query.filter(Project.project_name == data["project_name"])
+    if "year" in data:
+        query = query.filter(Project.year == data["year"])
+    if "students" in data:
+        query = query.filter(Project.students.any(Student.stu_id.in_(data["students"])))
+    if "supervisors" in data:
+        query = query.filter(Project.supervisors.any(Supervisor.name.in_(data["supervisors"])))
+    if "categories" in data:
+        query = query.filter(Project.categories.any(Category.categoryName.in_(data["categories"])))
+    if "degrees" in data:
+        query = query.filter(Project.degrees.any(Degree.degree.in_(data["degrees"])))
+    if "filetypes" in data:
+        query = query.filter(Project.filetypes.any(FileType.file_type.in_(data["filetypes"])))
 
+    projects = query.distinct().all()
+
+    result = []
     for p in projects:
-        data.append({
-            'projectID': p.projectID,
-            'project_name': p.project_name,
-            'view': p.view,
-            'year': p.year,
-            'expire_after': p.expire_after.isoformat() if p.expire_after else None,
-            'file_path': p.file_path,
-            # ความสัมพันธ์
-            'students': [{'stu_id': s.stu_id, 'firstname': s.firstname, 'lastname': s.lastname} for s in p.students],
-            'degrees': [d.degree for d in p.degrees],
-            'supervisors': [s.name for s in p.supervisors],
-            'categories': [c.categoryName for c in p.categories],
-            'filetypes': [f.file_type for f in p.filetypes]
+        result.append({
+            "projectID": p.projectID,
+            "project_name": p.project_name,
+            "description": p.description,
+            "view": p.view,
+            "year": p.year,
+            "expire_after": p.expire_after.isoformat() if p.expire_after else None,
+            "file_path": p.file_path,
+            "students": [{"stu_id": s.stu_id, "firstname": s.firstname, "lastname": s.lastname} for s in p.students],
+            "degrees": [d.degree for d in p.degrees],
+            "supervisors": [s.name for s in p.supervisors],
+            "categories": [c.categoryName for c in p.categories],
+            "filetypes": [f.file_type for f in p.filetypes],
         })
 
-    return Response(json.dumps(data, ensure_ascii=False, indent=4), mimetype='application/json')
-
-@app.route('/lab04')
-def lab04_bootstrap():
-    return app.send_static_file('lab04_bootstrap.html')
-
-@app.route('/lab10', methods=('GET', 'POST'))
-def lab10_phonebook():
-    if request.method == 'POST':
-        if request.is_json:
-            result = request.json
-        else:
-            result = request.form.to_dict()
-        app.logger.debug(str(result))
+    return jsonify(result)
 
 
-        id_ = result.get('id', '')
-        validated = True
-        validated_dict = dict()
-        valid_keys = ['firstname', 'lastname', 'phone']
-
-
-        # Validate the input
-        for key in valid_keys:
-            app.logger.debug(f"{key}: {result[key]}")
- 
-            value = result[key].strip()
-            if not value or value == 'undefined':
-                break
-            validated_dict[key] = value
-
-
-        if len(validated_dict.keys()) != len(valid_keys):
-            app.logger.debug('Validated dict: ' + str(validated_dict))
-            return lab10_db_contacts()
-
-
-        try:
-
-
-            if not id_:  # Create a new contact entry
-                entry = Contact(**validated_dict)
-                db.session.add(entry)
-            else:  # Update an existing contact entry
-                contact = Contact.query.get(id_)
-                if contact:
-                    contact.update(**validated_dict)
-                else:
-                    return lab10_db_contacts()
-
-
-            db.session.commit()  # Commit only if everything is successful
-
-
-            return lab10_db_contacts()
-
-
-        except Exception as e:
-            db.session.rollback()  # Rollback transaction on failure
-            app.logger.error(f"Database error: {str(e)}")
-            return lab10_db_contacts()
-
-
-    return app.send_static_file('lab10_phonebook.html')
-
-@app.route("/lab10/contacts")
-def lab10_db_contacts():
-    contacts = []
-    db_contacts = Contact.query.all()
-
-
-    contacts = list(map(lambda x: x.to_dict(), db_contacts))
-    app.logger.debug("DB Contacts: " + str(contacts))
-
-
-    return jsonify(contacts)
-
-@app.route('/lab10/remove_contact', methods=('GET', 'POST'))
-def lab10_remove_contacts():
-    app.logger.debug("LAB10 - REMOVE")
-
-
-    if request.method == 'POST':
-        if request.is_json:
-            result = request.json
-        else:
-            result = request.form.to_dict()
-
-
-        id_ = result.get('id', '')
-
-
-        if not id_:  # Validate ID
-            app.logger.error("Error: No ID provided for removal.")
-            return lab10_db_contacts()
-
-
-        try:
-
-
-            contact = Contact.query.get(id_)
-            if not contact:
-                app.logger.error(f"Error: Contact with id {id_} not found.")
-                return lab10_db_contacts()
-
-
-            db.session.delete(contact)
-
-
-            db.session.commit()  # Commit if successful
-            return lab10_db_contacts()
-
-
-        except Exception as ex:
-            db.session.rollback()  # Rollback on failure
-            app.logger.error(f"Error removing contact with id {id_}: {ex}")
-            return lab10_db_contacts()
-
-
-    return lab10_db_contacts()
+    
