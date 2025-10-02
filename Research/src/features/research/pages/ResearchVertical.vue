@@ -39,33 +39,67 @@
       <!-- RESULTS + PREVIEW -->
       <section>
         <div class="results">
+          <!-- LIST -->
           <div class="card">
             <div class="small">ผลการค้นหา</div>
             <div class="result-list">
               <div v-if="!results.length" class="result-item small">— ไม่พบผลลัพธ์ตามตัวกรอง</div>
-              <div v-for="r in results" :key="r.id" class="result-item" :class="{active: selected && selected.id===r.id}" @click="selected=r">
+
+              <!-- ITEM -->
+              <div
+                v-for="r in results"
+                :key="r.id"
+                class="result-item"
+                :class="{active: selected && selected.id===r.id}"
+                @click="toggleSelect(r)"
+              >
                 <div><strong>{{ r.title }}</strong></div>
-                <div class="small">{{ r.year }} • {{ r.type }} • {{ r.degree }} • {{ r.category }} • {{ r.advisor }}</div>
+                <div class="small">
+                  {{ r.year }} • {{ r.type }} • {{ r.degree || '—' }} • {{ r.category }} • {{ r.advisor }}
+                </div>
+
+                <!-- INLINE ACTIONS (แสดงเมื่อรายการนี้ถูกเลือก) -->
+                <transition name="fade">
+                  <div v-if="selected && selected.id===r.id" class="inline-actions">
+                    <button class="primary btn" :disabled="!r.pdfUrl" @click.stop="openLink(r.pdfUrl)">ดู PDF</button>
+                    <button class="btn" :disabled="!r.posterUrl" @click.stop="openLink(r.posterUrl)">ดู Poster</button>
+                    <span class="small muted" style="margin-left:auto">* ปุ่มเทาถ้าไฟล์ยังไม่พร้อม</span>
+                  </div>
+                </transition>
               </div>
             </div>
           </div>
+
+          <!-- PREVIEW -->
           <div class="card preview">
             <div class="small">ตัวอย่าง/รายละเอียด</div>
+
             <div v-if="!selected" class="skeleton" style="height:480px;margin-top:8px"></div>
+
             <div v-else style="margin-top:8px">
               <div><strong>{{ selected.title }}</strong></div>
-              <div class="small">{{ selected.category }} • {{ selected.type }} • {{ selected.degree }} • {{ selected.year }}</div>
+              <div class="small">
+                {{ selected.category }} • {{ selected.type }} • {{ selected.degree || '—' }} • {{ selected.year }}
+              </div>
               <div style="margin-top:8px">ที่ปรึกษา: {{ selected.advisor }}</div>
               <p style="margin-top:8px">{{ selected.abstract }}</p>
-              <div class="chips" style="margin-top:8px">
+
+              <div class="chips" style="margin:10px 0">
                 <span class="badge">{{ selected.category }}</span>
                 <span class="badge">{{ selected.type }}</span>
-                <span class="badge">{{ selected.degree }}</span>
+                <span class="badge" v-if="selected.degree">{{ selected.degree }}</span>
+              </div>
+
+              <!-- main actions -->
+              <div class="toolbar" style="gap:10px">
+                <button class="primary btn" :disabled="!selected.pdfUrl"   @click="openLink(selected.pdfUrl)">เปิด PDF</button>
+                <button class="btn"        :disabled="!selected.posterUrl" @click="openLink(selected.posterUrl)">เปิด Poster</button>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- TABLE -->
         <div class="panel" style="margin-top:14px">
           <div class="small">ผลลัพธ์แบบตาราง</div>
           <table class="table">
@@ -79,12 +113,13 @@
                 <td>{{ r.year }}</td>
                 <td>{{ r.category }}</td>
                 <td><span class="badge">{{ r.type }}</span></td>
-                <td>{{ r.degree }}</td>
+                <td>{{ r.degree || '—' }}</td>
                 <td>{{ r.advisor }}</td>
               </tr>
             </tbody>
           </table>
         </div>
+
         <div class="footer">Vertical ALT</div>
       </section>
     </div>
@@ -93,7 +128,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { getFacets, searchPublications } from '@/services/search.service' 
+import { getFacets, searchPublications } from '@/services/search.service.js'
 
 const facets = getFacets()
 let state = reactive({ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'', yearEnd:'' })
@@ -130,5 +165,21 @@ function reset(){
   results.value=[]; selected.value=null
 }
 
+function toggleSelect(r){
+  selected.value = (selected.value && selected.value.id === r.id) ? null : r
+}
+
+function openLink(url){
+  if(!url) return
+  window.open(url, '_blank', 'noopener')
+}
+
 onMounted(runSearch)
 </script>
+
+<style scoped>
+/* แอนิเมชันกาง/หุบของแถบปุ่ม */
+.fade-enter-active, .fade-leave-active { transition: all .18s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); }
+.inline-actions{ margin-top:10px; padding-top:10px; border-top:1px solid var(--bd); display:flex; gap:8px; align-items:center; }
+</style>

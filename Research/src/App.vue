@@ -1,31 +1,25 @@
 <template>
-<div class="app-shell">
-<header class="app-header">
-<h1>CS Research Search</h1>
-<nav>
-<RouterLink to="/research/horizontal">Horizontal</RouterLink>
-<span> · </span>
-<RouterLink to="/research/vertical">Vertical</RouterLink>
-</nav>
-</header>
+  <div>
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-brand">
+        <strong>CS Research Search</strong>
+        · <router-link to="/research/horizontal">Horizontal</router-link>
+        · <router-link to="/research/vertical">Vertical</router-link>
+      </div>
 
+      <!-- ปุ่มสลับธีม (มุมขวาบน) -->
+      <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
+        <span class="only-dark">🌞 Light</span>
+        <span class="only-light">🌙 Dark</span>
+      </button>
+    </header>
 
-<main class="app-main">
-<RouterView />
-</main>
-</div>
+    <!-- Page content -->
+    <router-view />
+  </div>
 </template>
 
-
 <script setup>
-// no-op
+const toggleTheme = () => window.__toggleTheme && window.__toggleTheme()
 </script>
-
-
-<style>
-.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.app-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 12px; }
-.app-header h1 { font-size: 16px; margin: 0; }
-.app-header nav a { text-decoration: none; }
-.app-main { padding: 16px; width: 100%; max-width: 1100px; margin: 0 auto; }
-</style>
