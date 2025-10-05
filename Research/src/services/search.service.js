@@ -1,97 +1,139 @@
-const MOCK = [{
-        id: '1',
-        title: 'Deep Learning for Thai NLP',
-        authors: ['A. Student', 'B. Advisor'],
-        abstract: 'ศึกษาวิธีการประมวลผลภาษาไทยด้วยโมเดลสมัยใหม่',
-        year: '2024',
-        category: 'Machine Learning',
-        type: '204499',
-        degree: 'Bachelor',
-        advisor: 'Assistant Professor Dr. Prakarn Unachak'
-    },
-    {
-        id: '2',
-        title: 'Computer Vision in Agriculture',
-        authors: ['C. Student'],
-        abstract: 'ประยุกต์ใช้ CV เพื่อตรวจโรคพืชจากภาพถ่าย',
-        year: '2023',
-        category: 'Image Processing',
-        type: 'Co-operative',
-        degree: 'Bachelor',
-        advisor: 'Associate Professor Dr. Ekkarat Boonchieng'
-    },
-    {
-        id: '3',
-        title: 'Anomaly Detection on Campus Network',
-        authors: ['D. Student'],
-        abstract: 'วิเคราะห์ทราฟฟิกเครือข่ายเพื่อหาพฤติกรรมผิดปกติ',
-        year: '2025',
-        category: 'Network',
-        type: 'Other Type',
-        degree: 'Master',
-        advisor: 'Associate Professor Dr. Rattasit Sukhahuta'
-    }
-]
+import { reactive } from 'vue'
 
-export function getFacets() {
+const API_BASE = '/api'
+
+// -------------------- normalize --------------------
+function normalizeItem(p = {}) {
+    const categories = Array.isArray(p.categories) ? p.categories : []
+    const filetypes = Array.isArray(p.filetypes) ? p.filetypes : []
+    const degrees = Array.isArray(p.degrees) ? p.degrees : []
+    const supervisors = Array.isArray(p.supervisors) ? p.supervisors : []
+
     return {
-        advisors: [
-            'Assistant Professor Dr. Ratsameetip Wita',
-            'Associate Professor Dr. Jakramate Bootkrajang',
-            'Assistant Professor Dr. Prakarn Unachak',
-            'Dr. Sutasinee Thovuttikul',
-            'Dr. Thapanapong Rukkanchanunt',
-            'Associate Professor Dr. Rattasit Sukhahuta',
-            'Associate Professor Dr. Ekkarat Boonchieng',
-            'Assistant Professor Dr. Dussadee Praserttitipong',
-            'Assistant Professor Dr. Suphakit Awiphan',
-            'Assistant Professor Dr. Wijak Srisujjalertwaja',
-            'Dr. Worawut Srisukkham',
-            'Assistant Professor Dr. Papangkorn Inkeaw',
-            'Assistant Professor Dr. Kornprom Pikulkaew',
-            'Associate Professor Dr. Jeerayut Chaijaruwanich',
-            'Associate Professor Dr. Chumphol Bunkhumpornpat',
-            'Associate Professor Dr. Varin Chouvatut',
-            'Associate Professor Dr. Wattana Jindaluang',
-            'Assistant Professor Dr. Samerkae Somhom',
-            'Assistant Professor Dr. Areerat Trongratsameethong',
-            'Assistant Professor Dr. Matinee Kiewkanya',
-            'Assistant Professor Dr. Jakarin Chawachat',
-            'Assistant Professor Dr. Prapaporn Techa-Angkoon',
-            'Assistant Professor Wassana Naiyapo',
-            'Assistant Professor Benjamas Panyangam',
-            'Noparut Vanitchanant',
-            'Dr. Kamonphop Srisopha',
-            'Dr. Khukrit Osathanunkul',
-            'Kittipitch Kuptavanich',
-            'Sitthichoke Subpaiboonkit'
-        ],
-        categories: [
-            'Web App', 'Machine Learning', 'Image Processing', 'Games', 'Data Classification',
-            'Data Analysis', 'Database', 'IoT', 'Network', 'Windows App', 'Security',
-            'Simulation', 'Data Warehouse', 'Virtual Reality', 'Other Categories'
-        ],
-        types: ['204499', 'Co-operative', 'Other Type'],
-        degrees: ['Bachelor', 'Master', 'PhD'],
-        years: ['2025', '2024', '2023', '2022', '2021']
+        id: String(p.projectID ?? p.id ?? ''),
+        title: p.project_name ?? p.title ?? '',
+        abstract: p.description ?? p.abstract ?? '',
+        year: String(p.year ?? ''),
+
+        // arrays
+        categories,
+        filetypes,
+        degrees,
+        supervisors,
+        authors: Array.isArray(p.students)
+            ? p.students.map(s => `${s.firstname ?? ''} ${s.lastname ?? ''}`.trim())
+            : [],
+
+        // singles (สำหรับ UI เดิม)
+        category: categories[0] || '',
+        type: filetypes[0] || '',
+        degree: degrees[0] || '',
+        advisor: supervisors[0] || '',
     }
 }
 
-// --- Search (ยัง filter จาก MOCK) ---
+// -------------------- search (POST /api/projects) --------------------
 export async function searchPublications(params = {}) {
-    const { query = '', advisor = '', category = '', year = '', type = '', degree = '' } = params
-    const q = query.trim().toLowerCase()
+    const {
+        query = '',
+        advisor = '',
+        category = '',
+        year = '',
+        type = '',
+        degree = ''
+    } = params
 
-    const filtered = MOCK.filter((r) => {
-        const okQ = !q || r.title.toLowerCase().includes(q) || (r.abstract || '').toLowerCase().includes(q)
-        const okA = !advisor || r.advisor === advisor
-        const okC = !category || r.category === category
-        const okY = !year || r.year === String(year)
-        const okT = !type || r.type === type
-        const okD = !degree || r.degree === degree
-        return okQ && okA && okC && okY && okT && okD
-    })
+    const body = {}
 
-    await new Promise((res) => setTimeout(res, 200))
-    return { items: filtered }
+    if (query && query.trim()) body.query = query.trim()
+    if (advisor) body.supervisors = [advisor]
+    if (category) body.categories = [category]
+    if (type) body.filetypes = [type]
+    if (degree) body.degrees = [degree]
+    if (year) {
+        const y = parseInt(String(year), 10)
+        if (!Number.isNaN(y)) body.year = y
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const arr = await res.json()
+        const items = Array.isArray(arr) ? arr.map(normalizeItem) : []
+        return { items }
+    } catch (e) {
+        console.error('searchPublications failed:', e)
+        return { items: [] }
+    }
+}
+
+// -------------------- facets store (Reactive Global Cache) --------------------
+const facetsStore = reactive({
+    advisors: [],
+    categories: [],
+    types: [],
+    degrees: [],
+    years: [],
+    keywords: []
+})
+
+let facetsInitStarted = false
+
+const sortAlpha = (a, b) => a.localeCompare(b)
+const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)))
+
+function setFacets(data = {}) {
+    const clean = (arr) => Array.isArray(arr) ? arr.filter(Boolean) : []
+    facetsStore.advisors = clean(data.advisors).sort(sortAlpha)
+    facetsStore.categories = clean(data.categories).sort(sortAlpha)
+    facetsStore.types = clean(data.types).sort(sortAlpha)
+    facetsStore.degrees = clean(data.degrees).sort(sortAlpha)
+    facetsStore.years = clean(data.years).sort((a, b) => Number(b) - Number(a)) // new → old
+    facetsStore.keywords = clean(data.keywords)
+}
+
+async function initFacets() {
+    // 1️⃣ พยายามโหลดจาก /api/facets ก่อน
+    try {
+        const res = await fetch(`${API_BASE}/facets`)
+        if (res.ok) {
+            const data = await res.json()
+            setFacets(data)
+            return
+        }
+    } catch (e) {
+        console.warn('getFacets API failed, fallback to local derive', e)
+    }
+
+    // 2️⃣ fallback: ดึงทั้งหมดจาก projects แล้ว derive facets เอง
+    try {
+        const { items } = await searchPublications({})
+        setFacets({
+            advisors: uniq(items.map(r => r.advisor)),
+            categories: uniq(items.map(r => r.category)),
+            types: uniq(items.map(r => r.type)),
+            degrees: uniq(items.map(r => r.degree)),
+            years: uniq(items.map(r => String(r.year))),
+            keywords: uniq(items.map(r => r.title)).slice(0, 30),
+        })
+    } catch (e) {
+        console.error('initFacets fallback failed:', e)
+    }
+}
+
+/**
+ * ใช้ใน Vue component ได้ทันที:
+ * const facets = getFacets()
+ * facets จะ reactive และถูกโหลดข้อมูลเบื้องหลังอัตโนมัติ
+ */
+export function getFacets() {
+    if (!facetsInitStarted) {
+        facetsInitStarted = true
+        initFacets()
+    }
+    return facetsStore
 }

@@ -16,6 +16,21 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    environment:
+      - VITE_PORT=5173
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./Research:/app
+    ports:
+      - "5173:5173"
+    command: sh -lc "npm ci || npm i && npm run dev"
+    depends_on:
+      - flask
   db:
     image: postgres:13-alpine
     ports:

@@ -64,5 +64,68 @@ def query_projects():
 
     return jsonify(result)
 
+@app.route('/api/health')
+def api_health():
+    return jsonify(status='ok')
 
-    
+
+@app.route('/api/facets')
+def get_facets():
+    # Advisors ที่มีผูกกับโปรเจกต์
+    advisors = [
+        r[0] for r in db.session.query(Supervisor.name)
+        .filter(Supervisor.name.isnot(None))
+        .order_by(Supervisor.name.asc())
+        .all()
+    ]
+
+    # หมวดหมู่ทั้งหมด
+    categories = [
+        r[0] for r in db.session.query(Category.categoryName)
+        .filter(Category.categoryName.isnot(None))
+        .order_by(Category.categoryName.asc())
+        .all()
+    ]
+
+    # ประเภทไฟล์ / ประเภทผลงานทั้งหมด
+    types_ = [
+        r[0] for r in db.session.query(FileType.file_type)
+        .filter(FileType.file_type.isnot(None))
+        .order_by(FileType.file_type.asc())
+        .all()
+    ]
+
+    # ระดับปริญญาทั้งหมด
+    degrees = [
+        r[0] for r in db.session.query(Degree.degree)
+        .filter(Degree.degree.isnot(None))
+        .order_by(Degree.degree.asc())
+        .all()
+    ]
+
+    # ปีที่มีในตาราง Project จริง (distinct)
+    years = [
+        str(r[0]) for r in db.session.query(Project.year)
+        .filter(Project.year.isnot(None))
+        .distinct()
+        .order_by(Project.year.desc())
+        .all()
+    ]
+
+    # Keywords (ใช้ชื่อโปรเจกต์ยอดวิวสูงสุดก่อน)
+    keywords = [
+        r[0] for r in db.session.query(Project.project_name)
+        .filter(Project.project_name.isnot(None))
+        .order_by(Project.view.desc().nullslast(), Project.project_name.asc())
+        .limit(30)
+        .all()
+    ]
+
+    return jsonify({
+        "advisors": advisors,
+        "categories": categories,
+        "types": types_,
+        "degrees": degrees,
+        "years": years,
+        "keywords": keywords
+    })
