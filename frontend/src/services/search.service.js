@@ -29,6 +29,13 @@ function normalizeItem(p = {}) {
         type: filetypes[0] || '',
         degree: degrees[0] || '',
         advisor: supervisors[0] || '',
+
+        // เก็บ path ดั้งเดิมไว้ เผื่อต้องใช้
+        filePath: p.file_path || '',
+        // สร้าง URL ที่ template ต้องการ โดยอิงจากนามสกุลไฟล์
+        // ถ้าเป็น .pdf ให้สร้าง pdfUrl, ถ้าเป็นรูปภาพ ให้สร้าง posterUrl
+        pdfUrl: (p.file_path && p.file_path.endsWith('.pdf')) ? p.file_path : null,
+        posterUrl: (p.file_path && (p.file_path.endsWith('.png') || p.file_path.endsWith('.jpg') || p.file_path.endsWith('.zip') || p.file_path.endsWith('.docx'))) ? p.file_path : null,
     }
 }
 

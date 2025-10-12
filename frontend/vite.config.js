@@ -9,6 +9,10 @@ export default defineConfig({
             '/api': {
                 target: 'http://backend:8080',
                 changeOrigin: true,
+            },
+            '/files': {
+                target: 'http://backend:8080',
+                changeOrigin: true,
             }
         }
     },

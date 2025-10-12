@@ -31,6 +31,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# backend/.dockerignore
+# เพิ่มหลัง production uploads/
+
 # C extensions
 *.so
 

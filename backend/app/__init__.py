@@ -19,6 +19,7 @@ app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = \
     '161c157cca64d2eaddd38e55b76789a5fbc78e982c543398'
 app.config['JSON_AS_ASCII'] = False
+app.config['UPLOAD_FOLDER'] = '/app/uploads'
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite://")

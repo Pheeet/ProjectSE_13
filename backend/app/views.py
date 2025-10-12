@@ -1,6 +1,6 @@
 import json
 from flask import (jsonify, render_template,
-                   request, url_for, flash, redirect, Response)
+                   request, url_for, flash, redirect, Response, send_from_directory, current_app)
 
 
 from sqlalchemy.sql import text
@@ -129,3 +129,8 @@ def get_facets():
         "years": years,
         "keywords": keywords
     })
+
+@app.route('/files/<path:filename>')
+def uploaded_file(filename):
+    # ใช้ send_from_directory เพื่อส่งไฟล์จาก path ที่เราตั้งค่าไว้ใน config
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
