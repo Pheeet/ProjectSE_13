@@ -1,4 +1,5 @@
-name: "flask-app1"
+version: "3.9"
+name: "new-research-dev"
 services:
   flask:
     build: flask
