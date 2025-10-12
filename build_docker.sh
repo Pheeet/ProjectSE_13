@@ -7,7 +7,7 @@
 
 app="docker.test"
 docker build -t ${app} .
-docker run -p 56733:8000 -d \
+docker run -p 56733:8080 -d \
   --name=${app} \
   -e FLASK_DEBUG=${FLASK_DEBUG} \
   -v "$PWD":/flask_app ${app}

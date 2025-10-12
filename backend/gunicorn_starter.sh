@@ -33,5 +33,5 @@ echo "Running on gunicorn"
 if [ -f gunicorn.config.py ]; then
   exec gunicorn main:app -c "$PWD/gunicorn.config.py"
 else
-  exec gunicorn -w 2 -b 0.0.0.0:8000 main:app
+  exec gunicorn -w 2 -b 0.0.0.0:8080 main:app
 fi
