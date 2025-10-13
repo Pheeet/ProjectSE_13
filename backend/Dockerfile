@@ -37,11 +37,12 @@ RUN apk add --no-cache postgresql-libs
 
 # Copy installed dependencies from the build stage
 COPY --from=build /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-COPY --from=build /usr/local/bin/gunicorn /usr/local/bin/
+COPY --from=build /usr/local/bin/ /usr/local/bin/
 
 COPY . /flask_app
 
 EXPOSE 8080
+
 # Specify the entry point
 ENTRYPOINT [ "./gunicorn_starter.sh" ]
 

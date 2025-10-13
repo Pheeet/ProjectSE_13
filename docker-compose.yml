@@ -14,7 +14,6 @@ services:
       - FLASK_RUN_PORT=8080
     depends_on:
       - db
-    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -27,7 +26,6 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-    restart: unless-stopped
   db:
     image: postgres:13-alpine
     container_name: new_research_db_dev
@@ -39,7 +37,6 @@ services:
       - POSTGRES_USER=hello_flask
       - POSTGRES_PASSWORD=hello_flask
       - POSTGRES_DB=hello_flask_dev
-    restart: unless-stopped
 volumes:
   # persistent volume on host at
   # /var/lib/docker/postgres_data
