@@ -1,209 +1,191 @@
-# backend/tests/test_views.py
 import pytest
-from app.models.project import Project, Category, Supervisor
+from unittest.mock import patch
 from werkzeug.debug import DebuggedApplication
+import sys
+import importlib
+from sqlalchemy import text
+
+from app import db
+from app.models.project import Project, Category, Supervisor, Student, Degree, FileType
+
+# =====================================================================
+# ==                      UNIT TESTS (Core App)                      ==
+# =====================================================================
+
+def test_app_in_debug_mode_when_not_testing(monkeypatch):
+    """
+    [Unit Test] ทดสอบว่า app อยู่ใน debug mode เมื่อ FLASK_ENV ไม่ใช่ 'testing'
+    """
+    monkeypatch.setenv('FLASK_ENV', 'development')
+    app_module = sys.modules['app']
+    importlib.reload(app_module)
+    reloaded_app = app_module.app
+    
+    assert reloaded_app.config['DEBUG'] is True
+    assert not reloaded_app.config['TESTING']
+    assert isinstance(reloaded_app.wsgi_app, DebuggedApplication)
+
+    # Cleanup: ตั้งค่ากลับเป็น testing เพื่อไม่ให้กระทบเทสอื่น
+    monkeypatch.setenv('FLASK_ENV', 'testing')
+    importlib.reload(app_module)
+
+def test_trailing_slash_redirect(client):
+    """[Unit Test] ทดสอบการ redirect URL ที่มี trailing slash"""
+    response = client.get('/api/health/')
+    assert response.status_code == 301
+    assert response.location == '/api/health'
+
+def test_404_not_found_handler(client):
+    """[Unit Test] ทดสอบ error handler สำหรับ 404 Not Found"""
+    response = client.get('/a-non-existent-url')
+    assert response.status_code == 404
+    assert response.is_json and response.json["error"] == "Not Found"
+
 # =====================================================================
 # ==                      INTEGRATION TESTS                          ==
 # =====================================================================
 
+@pytest.fixture(scope="function")
+def seed_db_for_filters(client):
+    """Fixture สำหรับสร้างข้อมูลที่ซับซ้อนเพื่อทดสอบ Filter ทุกรูปแบบ"""
+    cat_web = Category(categoryName="Web Development")
+    cat_ai = Category(categoryName="Artificial Intelligence")
+    sup_a = Supervisor(name="Dr. A")
+    sup_b = Supervisor(name="Prof. B")
+    stu_1 = Student(stu_id=650610001, firstname="John", lastname="Doe", email="john.d@cmu.ac.th")
+    deg_bs = Degree(degree="Bachelor of Science")
+    ft_pdf = FileType(file_type="PDF")
 
-# --- Integration Test: Basic Endpoint Tests ---
-# กลุ่มนี้ทดสอบว่า Endpoint พื้นฐานสามารถเข้าถึงและทำงานได้ถูกต้อง
-def test_health_check(client):
-    """
-    ทดสอบว่า API /api/health ทำงานและตอบกลับถูกต้อง
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing
-    """
-    response = client.get('/api/health')
-    assert response.status_code == 200
-    assert response.json['status'] == 'ok'
+    # Project 1: Web, 2025, Dr. A, John Doe, BS, PDF
+    p1 = Project(project_name="Web Project 2025", year=2025)
+    p1.categories.append(cat_web)
+    p1.supervisors.append(sup_a)
+    p1.students.append(stu_1)
+    p1.degrees.append(deg_bs)
+    p1.filetypes.append(ft_pdf)
 
-def test_get_facets_returns_data_from_seeded_db(client, db_session):
-    """
-    ทดสอบว่า API /api/facets ดึงข้อมูลจาก DB ที่มี dummy data ได้ถูกต้อง
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, SQLAlchemy Query, DB Connection
-    """
-    response = client.get('/api/facets')
-    assert response.status_code == 200
-    data = response.json
-    assert isinstance(data, dict)
-    assert len(data['advisors']) > 0
-    assert len(data['categories']) > 0
-    assert len(data['years']) > 0
+    # Project 2: AI, 2025, Prof. B
+    p2 = Project(project_name="AI Project 2025", year=2025)
+    p2.categories.append(cat_ai)
+    p2.supervisors.append(sup_b)
+    
+    db.session.add_all([cat_web, cat_ai, sup_a, sup_b, stu_1, deg_bs, ft_pdf, p1, p2])
+    db.session.commit()
 
-def test_file_serving(client, db_session):
-    """
-    ทดสอบว่า API /files/<filename> สามารถส่งไฟล์ dummy กลับมาได้
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, File System Access
-    """
-    response = client.get('/files/mock1.pdf')
-    assert response.status_code == 200
-    assert response.mimetype == 'application/pdf'
+# --- Basic Endpoint Tests ---
 
-def test_file_serving_not_found(client, db_session):
-    """
-    ทดสอบว่า API /files/<filename> คืนค่า 404 ถ้าไฟล์ไม่มีอยู่จริง
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, File System Access
-    """
-    response = client.get('/files/a-file-that-does-not-exist.pdf')
-    assert response.status_code == 404
-
-
-# --- Integration Test: Core Feature - POST /api/projects ---
-# กลุ่มนี้ทดสอบ Logic หลักของแอปพลิเคชัน คือการค้นหาและ Filter ข้อมูล
-
-def test_query_projects_with_empty_filter(client, db_session):
-    """
-    ทดสอบการค้นหาโดยไม่มีเงื่อนไข ควรจะได้โปรเจกต์ทั้งหมดกลับมา
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, SQLAlchemy Query, DB Connection
-    """
-    response = client.post('/api/projects', json={})
-    assert response.status_code == 200
-    projects = response.json
-    assert isinstance(projects, list)
-    assert len(projects) == 8 
-
-def test_query_projects_with_year_filter(client, db_session):
-    """
-    ทดสอบการค้นหาด้วย 'year'
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, SQLAlchemy Filtering Logic, DB Connection
-    """
-    response = client.post('/api/projects', json={"year": 2025})
-    assert response.status_code == 200
-    projects = response.json
-    assert len(projects) > 0
-    for project in projects:
-        assert project['year'] == 2025
-
-def test_query_projects_with_category_filter(client, db_session):
-    """
-    ทดสอบการค้นหาด้วย 'categories' ซึ่งต้องมีการ Join Table
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, SQLAlchemy Filtering & Join Logic, DB Connection
-    """
-    response = client.post('/api/projects', json={"categories": ["Artificial Intelligence"]})
-    assert response.status_code == 200
-    projects = response.json
-    assert len(projects) > 0
-    for project in projects:
-        assert "Artificial Intelligence" in project['categories']
-
-def test_query_projects_with_multiple_filters(client, db_session):
-    """
-    ทดสอบการค้นหาด้วยเงื่อนไขหลายอย่างพร้อมกัน (AND)
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, Complex SQLAlchemy Filtering, DB Connection
-    """
-    filters = {
-        "categories": ["Web Development"],
-        "year": 2025
-    }
-    response = client.post('/api/projects', json=filters)
-    assert response.status_code == 200
-    projects = response.json
-    assert len(projects) == 2
-    for project in projects:
-        assert project['year'] == 2025
-        assert "Web Development" in project['categories']
-
-def test_query_projects_with_no_results(client, db_session):
-    """
-    ทดสอบการค้นหาด้วยเงื่อนไขที่ไม่มีทางเจอผลลัพธ์
-    - ส่วนที่ทดสอบร่วมกัน: Flask Routing, SQLAlchemy Filtering Logic, DB Connection
-    """
-    filters = {"year": 9999}
-    response = client.post('/api/projects', json=filters)
-    assert response.status_code == 200
-    projects = response.json
-    assert isinstance(projects, list)
-    assert len(projects) == 0
-
-def test_home_page_endpoint(client):
-    """ทดสอบว่าหน้า Home (/) สามารถเข้าถึงและได้ข้อมูลที่ถูกต้อง"""
+def test_home_endpoint(client):
+    """[Integration] ทดสอบ Endpoint หน้า Home (/)"""
     response = client.get('/')
     assert response.status_code == 200
     assert b"Flask says 'Hello world!'" in response.data
 
-def test_db_connection_page_endpoint(client, db_session):
-    """ทดสอบว่าหน้า /db สามารถเชื่อมต่อกับฐานข้อมูลได้สำเร็จ"""
+def test_db_connection_success(client):
+    """[Integration] ทดสอบ Endpoint /db เมื่อเชื่อมต่อสำเร็จ"""
     response = client.get('/db')
     assert response.status_code == 200
     assert b"db works." in response.data
 
-def test_app_is_wrapped_by_debugged_application_in_debug_mode(app):
-    """
-    [Unit Test]
-    ทดสอบว่าเมื่อ app.debug = True, wsgi_app จะถูกหุ้มด้วย DebuggedApplication
-    เพื่อเพิ่ม Coverage ใน __init__.py
-    """
-    # GIVEN: เรามี app fixture
-    
-    # WHEN: เราตั้งค่าให้ app อยู่ใน debug mode โดยตรง
-    app.config['DEBUG'] = True
-    
-    # Reload the wsgi_app logic based on the new debug setting
-    if app.debug:
-        app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
-    # THEN: ตรวจสอบว่า wsgi_app เป็น instance ของ DebuggedApplication จริงๆ
-    assert isinstance(app.wsgi_app, DebuggedApplication)
+# --- API Endpoint Tests ---
 
-def test_trailing_slash_redirect(client):
-    """
-    [Unit Test]
-    ทดสอบว่า @app.before_request ทำการ redirect URL ที่มี trailing slash
-    ไปยัง URL ที่ไม่มี trailing slash ได้ถูกต้อง เพื่อเพิ่ม Coverage ใน __init__.py
-    """
-    # GIVEN: เรามี client
-    
-    # WHEN: เราเรียกไปที่ endpoint ที่มี trailing slash (/) ต่อท้าย
-    response = client.get('/api/health/') # สังเกต / ที่เพิ่มเข้ามา
-
-    # THEN: ตรวจสอบผลลัพธ์
-    # 1. Status code ควรจะเป็น 301 MOVED PERMANENTLY
-    assert response.status_code == 301
-    
-    # 2. Header 'Location' ควรจะชี้ไปยัง URL ที่ถูกต้อง (ไม่มี / ต่อท้าย)
-    assert response.location == '/api/health'
-
-
-def test_query_projects_with_supervisor_filter(client, db_session):
-    """
-    [Integration Test]
-    ทดสอบการค้นหาโปรเจกต์ด้วย 'supervisors' โดยใช้ข้อมูลที่ไม่ซ้ำใคร
-    """
-    # GIVEN: สร้างข้อมูลที่ไม่น่าจะซ้ำกับ dummy data เดิม
-    # 1. สร้าง Supervisor ที่มีชื่อเฉพาะสำหรับการเทสนี้
-    unique_supervisor_name = "TEST_SUPERVISOR_XYZ"
-    supervisor_a = Supervisor(name=unique_supervisor_name)
-    supervisor_b = Supervisor(name="Another Supervisor") # สร้างเผื่อไว้
-    
-    db_session.add_all([supervisor_a, supervisor_b])
-    db_session.commit()
-
-    # 2. สร้าง Project ที่มีชื่อเฉพาะ
-    unique_project_name = "Project for Supervisor Test"
-    project_1 = Project(project_name=unique_project_name, year=2025)
-    project_2 = Project(project_name="Another Project", year=2024)
-
-    db_session.add_all([project_1, project_2])
-    db_session.commit()
-
-    # 3. เชื่อม Project เข้ากับ Supervisor
-    project_1.supervisors.append(supervisor_a)
-    project_2.supervisors.append(supervisor_b)
-    
-    db_session.commit()
-
-    # WHEN: ส่ง POST request เพื่อค้นหาเฉพาะโปรเจกต์ของ Supervisor ที่ไม่ซ้ำใครของเรา
-    response = client.post('/api/projects', json={"supervisors": [unique_supervisor_name]})
-
-    # THEN: ตรวจสอบผลลัพธ์
+def test_health_check_endpoint(client):
+    """[Integration] ทดสอบ /api/health"""
+    response = client.get('/api/health')
     assert response.status_code == 200
-    
+    assert response.json['status'] == 'ok'
+
+def test_get_facets_with_data(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/facets เมื่อมีข้อมูล"""
+    response = client.get('/api/facets')
+    assert response.status_code == 200
+    data = response.json
+    assert sorted(data['advisors']) == ["Dr. A", "Prof. B"]
+    assert sorted(data['categories']) == ["Artificial Intelligence", "Web Development"]
+    assert sorted(data['years']) == [2025]
+
+def test_get_facets_with_empty_db(client):
+    """[Integration] ทดสอบ /api/facets เมื่อ DB ว่าง"""
+    response = client.get('/api/facets')
+    assert response.status_code == 200
+    data = response.json
+    assert data['advisors'] == [] and data['categories'] == [] and data['years'] == []
+
+def test_query_projects_with_all_new_filters(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/projects ด้วยเงื่อนไข Filter ที่เพิ่มเข้ามาใหม่ทั้งหมด"""
+    filters = {
+        "project_name": "Web Project 2025",
+        "students": [650610001],
+        "degrees": ["Bachelor of Science"],
+        "filetypes": ["PDF"]
+    }
+    response = client.post('/api/projects', json=filters)
+    assert response.status_code == 200
     projects = response.json
-    assert isinstance(projects, list)
-    
-    # ตอนนี้เรามั่นใจได้ว่าผลลัพธ์ที่ได้ควรจะมีแค่ 1 อันพอดี
     assert len(projects) == 1
-    
-    # ตรวจสอบว่าโปรเจกต์ที่ได้กลับมาคือโปรเจกต์ที่เราสร้างขึ้นจริงๆ
-    assert projects[0]['project_name'] == unique_project_name
+    assert projects[0]['project_name'] == "Web Project 2025"
+
+# -- NEW TESTS TO COVER MISSING LINES --
+def test_query_projects_with_year_only(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/projects ด้วย year filter เท่านั้น"""
+    response = client.post('/api/projects', json={"year": 2025})
+    assert response.status_code == 200
+    assert len(response.json) == 2
+
+def test_query_projects_with_supervisor_only(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/projects ด้วย supervisor filter เท่านั้น"""
+    response = client.post('/api/projects', json={"supervisors": ["Prof. B"]})
+    assert response.status_code == 200
+    projects = response.json
+    assert len(projects) == 1
+    assert projects[0]['project_name'] == "AI Project 2025"
+
+def test_query_projects_with_category_only(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/projects ด้วย category filter เท่านั้น"""
+    response = client.post('/api/projects', json={"categories": ["Web Development"]})
+    assert response.status_code == 200
+    projects = response.json
+    assert len(projects) == 1
+    assert projects[0]['project_name'] == "Web Project 2025"
+# -- END OF NEW TESTS --
+
+def test_query_projects_with_empty_filter_returns_all(client, seed_db_for_filters):
+    """[Integration] ทดสอบ /api/projects โดยไม่มีเงื่อนไข"""
+    response = client.post('/api/projects', json={})
+    assert response.status_code == 200
+    assert len(response.json) == 2
+
+def test_query_projects_bad_request(client):
+    """[Integration] ทดสอบ /api/projects เมื่อส่ง request ที่ไม่ใช่ JSON"""
+    response = client.post('/api/projects', data="not json", headers={'Content-Type': 'application/json'})
+    assert response.status_code == 400
+    assert response.is_json and response.json["error"] == "Bad Request"
+
+@patch('app.views.send_from_directory')
+def test_file_serving_success(mock_send_from_directory, client):
+    """[Integration] ทดสอบ /files/<filename> สำเร็จ โดยการ Mock"""
+    mock_send_from_directory.return_value = "file content"
+    response = client.get('/files/somefile.pdf')
+    assert response.status_code == 200
+    assert response.data == b"file content"
+    mock_send_from_directory.assert_called_once()
+
+def test_file_serving_not_found(client):
+    """[Integration] ทดสอบ /files/<filename> เมื่อไฟล์ไม่มีอยู่จริง"""
+    response = client.get('/files/non_existent_file.pdf')
+    assert response.status_code == 404
+
+def test_db_connection_failure(client):
+    """[Integration] ทดสอบ Endpoint /db เมื่อเชื่อมต่อล้มเหลว"""
+    # แก้ไข: เปลี่ยนเป้าหมายการ patch ให้เจาะจงไปที่ object ที่ถูกใช้ใน view ('app.views.db')
+    with patch('app.views.db.engine.connect') as mock_connect:
+        # GIVEN: Mock ให้การ connect เกิด Exception
+        mock_connect.side_effect = Exception("Connection failed")
+        
+        # WHEN: เรียก Endpoint /db
+        response = client.get('/db')
+        
+        # THEN: ตรวจสอบว่าได้รับหน้า Error ที่ถูกต้อง
+        assert response.status_code == 200
+        assert b"db is broken." in response.data
+        assert b"Connection failed" in response.data

@@ -9,6 +9,16 @@ from app import db
 from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
     ProjectSupervisor, ProjectCategory, ProjectFileType, Admin, ProjectStudent, ProjectDegree
 
+@app.errorhandler(400)
+def bad_request_error(error):
+   
+    return jsonify({"error": "Bad Request"}), 400
+
+@app.errorhandler(404)
+def not_found_error(error):
+    """Error handler for 404 Not Found."""
+    return jsonify({"error": "Not Found"}), 404
+
 @app.route('/')
 def home():
     return "Flask says 'Hello world!'"
@@ -105,7 +115,7 @@ def get_facets():
 
     # ปีที่มีในตาราง Project จริง (distinct)
     years = [
-        str(r[0]) for r in db.session.query(Project.year)
+        r[0] for r in db.session.query(Project.year)
         .filter(Project.year.isnot(None))
         .distinct()
         .order_by(Project.year.desc())
