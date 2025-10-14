@@ -19,3 +19,5 @@ PyPDF2>=3.0.0
 # For testing
 pytest
 pytest-flask
+pytest-cov
+pytest-mock

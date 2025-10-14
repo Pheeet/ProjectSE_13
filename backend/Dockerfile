@@ -3,7 +3,7 @@ FROM python:3.10-alpine3.17 AS build
 
 
 # Set work directory
-WORKDIR /flask_app
+WORKDIR /app
 
 
 # Update system & install build dependencies
@@ -11,7 +11,7 @@ RUN apk update && apk --no-cache add git gcc libc-dev libffi-dev
 
 
 # Install dependencies
-COPY ./requirements.txt /flask_app/
+COPY ./requirements.txt /app/
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
@@ -24,13 +24,13 @@ FROM python:3.10-alpine3.17
 
 
 # Set work directory
-WORKDIR /flask_app
+WORKDIR /app
 
 
 # Prevent Python from writing pyc files & buffering
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/flask_app/bin:$PATH"
+    PATH="/app/bin:$PATH"
 
 # ติดตั้ง runtime libraries
 RUN apk add --no-cache postgresql-libs
@@ -39,7 +39,7 @@ RUN apk add --no-cache postgresql-libs
 COPY --from=build /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=build /usr/local/bin/ /usr/local/bin/
 
-COPY . /flask_app
+COPY . /app
 
 EXPOSE 8080
 
