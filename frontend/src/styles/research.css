@@ -258,7 +258,7 @@ input::placeholder {
 }
 
 
-/* ========== Horizontal page ========== */
+/* ========== Horizontal page < Dashboard > ========== */
 
 .wrap {
     margin: 14px;
@@ -306,7 +306,7 @@ input::placeholder {
 }
 
 
-/* ========== Vertical page ========== */
+/* ========== Vertical page < Research > ========== */
 
 .layout {
     display: grid;
@@ -318,8 +318,23 @@ input::placeholder {
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 20px;
 }
+
+.sidebar input:not([type]) {
+    height: 48px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/*
+.sidebar input[type="text"],
+.sidebar input:not([type]) {
+    height: 48px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+*/
 
 .toolbar {
     display: flex;

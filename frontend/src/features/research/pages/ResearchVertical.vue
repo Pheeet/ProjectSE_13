@@ -6,10 +6,10 @@
         <div class="small">ค้นหา</div>
         <input v-model="state.query" placeholder="ค้นหาคำหลัก (ไทย/อังกฤษ)" />
         <div class="small">ปี</div>
-        <div class="toolbar">
-          <input v-model.number="state.yearStart" type="number" placeholder="ตั้งแต่"/>
-          <input v-model.number="state.yearEnd" type="number" placeholder="ถึง"/>
-        </div>
+        <select v-model="state.yearStart">
+          <option value="">ทุกปี</option>
+          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+        </select>
         <div class="small">Category</div>
         <select v-model="state.category">
           <option value="">ทุก Category</option>
@@ -42,8 +42,12 @@
           <!-- LIST -->
           <div class="card">
             <div class="small">ผลการค้นหา</div>
+            <div v-if="!results.length" class="result-item small">— ไม่พบผลลัพธ์ตามตัวกรอง
+            </div>
             <div class="result-list">
-              <div v-if="!results.length" class="result-item small">— ไม่พบผลลัพธ์ตามตัวกรอง</div>
+              <div v-if="!hasSearched" class="result-item" style="text-align:center; padding: 100px 10px;">
+              <strong>คลิก 'ค้นหา' เพื่อเริ่มค้นหาข้อมูล</strong>
+            </div>
 
               <!-- ITEM -->
               <div
@@ -101,14 +105,15 @@
 
         <!-- TABLE -->
         <div class="panel" style="margin-top:14px">
-          <div class="small">ผลลัพธ์แบบตาราง</div>
+          <div class="small">งานวิจัยที่ใกล้เคียง</div>
           <table class="table">
             <thead><tr>
               <th style="width:34%">ชื่อเรื่อง</th><th>ปี</th><th>Category</th><th>Type</th><th>Degree</th><th>Advisor</th>
             </tr></thead>
             <tbody>
-              <tr v-if="!results.length"><td colspan="6" class="small" style="color:#8b9099">— ไม่มีข้อมูล</td></tr>
-              <tr v-for="r in results" :key="'t-'+r.id">
+              <tr v-if="!selected"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— เลือกงานวิจัยจากด้านบนเพื่อดูงานวิจัยที่ใกล้เคียง</td></tr>
+              <tr v-else-if="!relatedResults.length"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— ไม่พบงานวิจัยที่ใกล้เคียงตามตัวกรองทั้งหมด</td></tr>
+              <tr v-for="r in relatedResults" :key="'t-'+r.id">
                 <td>{{ r.title }}</td>
                 <td>{{ r.year }}</td>
                 <td>{{ r.category }}</td>
@@ -120,21 +125,60 @@
           </table>
         </div>
 
-        <div class="footer">Vertical ALT</div>
+        <div class="footer">Research</div>
       </section>
     </div>
   </section>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 import { getFacets, searchPublications } from '@/services/search.service.js'
 
 const facets = getFacets()
-let state = reactive({ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'', yearEnd:'' })
+let state = reactive({ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'' })
 let results = ref([])
 let loading = ref(false)
 let selected = ref(null)
+
+// สถานะเริ่มต้น
+let hasSearched = ref(false)
+let allResearchItems = ref([]) // เก็บงานวิจัยทั้งหมด (ไม่ถูกกรองด้วย sidebar)
+let initialDataLoaded = ref(false) // สถานะเพื่อโหลดข้อมูลทั้งหมดแค่ครั้งเดียว
+
+const relatedResults = computed(() => {
+  if (!selected.value) return []
+
+  const r = selected.value
+  const allResults = allResearchItems.value
+
+  const scoredResults = allResults
+    .filter(item => item.id !== r.id) //เอาตัวเองออก
+    .map(item => {
+      let score = 0
+
+    // **เงื่อนไขให้คะแนน** 
+    if (item.category === r.category) score += 10
+    if (item.type === r.type) score += 5
+    if (item.degree === r.degree) score += 3
+    if (item.year === r.year) score += 2
+    if (item.advisor === r.advisor) score += 1
+
+    return { ...item, score }
+  })
+  const filteredResults = scoredResults.filter(item => item.score > 0)
+  filteredResults.sort((a, b) => b.score - a.score)
+  return filteredResults
+})
+
+const currentYear = new Date().getFullYear()
+const years = computed(() => {
+  const list = [''] // 5 ปี
+  for (let i = 0; i < 5; i++) { 
+    list.push(currentYear - i)
+  }
+  return list
+})
 
 function applyFilters(rows){
   const q = state.query.trim().toLowerCase()
@@ -142,7 +186,7 @@ function applyFilters(rows){
   const y2 = Number(state.yearEnd)||9999
   return rows.filter(r=>{
     if(q && !(r.title.toLowerCase().includes(q) || (r.abstract||'').toLowerCase().includes(q))) return false
-    if(Number(r.year) < y1 || Number(r.year) > y2) return false
+    if(state.yearStart && Number(r.year) !== Number(state.yearStart)) return false
     if(state.category && r.category !== state.category) return false
     if(state.type && r.type !== state.type) return false
     if(state.degree && r.degree !== state.degree) return false
@@ -151,18 +195,29 @@ function applyFilters(rows){
   })
 }
 
+// ฟังก์ชันดึงข้อมูลทั้งหมด
+async function loadAllData() {
+    if (initialDataLoaded.value) return
+    const { items } = await searchPublications({})
+    allResearchItems.value = items
+    initialDataLoaded.value = true
+}
+
 async function runSearch(){
   loading.value = true
   try{
-    const { items } = await searchPublications(state)
-    results.value = applyFilters(items)
+    await loadAllData()
+    results.value = applyFilters(allResearchItems.value)
+
     selected.value = results.value[0] || null
+    hasSearched.value = true
   } finally { loading.value = false }
 }
 
 function reset(){
   Object.assign(state,{ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'', yearEnd:'' })
   results.value=[]; selected.value=null
+  hasSearched.value = false
 }
 
 function toggleSelect(r){
@@ -174,7 +229,7 @@ function openLink(url){
   window.open(url, '_blank', 'noopener')
 }
 
-onMounted(runSearch)
+onMounted(reset)
 </script>
 
 <style scoped>

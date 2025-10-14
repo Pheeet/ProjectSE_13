@@ -105,14 +105,14 @@
         </div>
       </div>
 
-      <div class="footer" style="grid-column:1/3">Horizontal</div>
+      <div class="footer" style="grid-column:1/3">Dashboard</div> <!-- 3) Top Research Groups -->
     </div>
   </section>
 </template>
 
 <script setup>
 /* Vue */
-import { reactive, computed, onMounted } from 'vue'
+import { reactive, computed, onMounted, watch } from 'vue'
 
 /* Chart.js + vue-chartjs (+ datalabels) */
 import { Line, Pie, Bar } from 'vue-chartjs'
@@ -168,6 +168,12 @@ async function load() {
   const { items } = await searchPublications({})
   results.splice(0, results.length, ...applyFilters(items))
 }
+
+watch(state, (newVal, oldVal) => {
+  // หากมีการเปลี่ยนแปลงใน state ให้เรียก load() ใหม่
+  // อาจจะมีการ Debounce เพื่อป้องกันการยิง API ถี่เกินไป
+  load()
+}, { deep: true }) // ต้องใช้ deep: true เพราะ state เป็น reactive object
 
 function reset() {
   Object.assign(state, { query:'', advisor:'', category:'', type:'', degree:'', yearStart:'', yearEnd:'' })
