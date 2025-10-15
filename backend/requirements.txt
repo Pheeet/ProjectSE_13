@@ -21,3 +21,6 @@ pytest
 pytest-flask
 pytest-cov
 pytest-mock
+
+flask-marshmallow
+marshmallow-sqlalchemy

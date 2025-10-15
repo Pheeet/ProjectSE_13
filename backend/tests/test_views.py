@@ -189,3 +189,36 @@ def test_db_connection_failure(client):
         assert response.status_code == 200
         assert b"db is broken." in response.data
         assert b"Connection failed" in response.data
+
+def test_query_projects_with_invalid_data_type(client):
+    """
+    [Integration] ทดสอบ /api/projects เมื่อส่งชนิดข้อมูลที่ไม่ถูกต้อง (Validation Test)
+    """
+    # GIVEN: ส่ง 'year' เป็น string ที่ไม่ถูกต้อง
+    invalid_filters = {
+        "year": "a-bad-year"
+    }
+
+    # WHEN: เรียก API
+    response = client.post('/api/projects', json=invalid_filters)
+
+    # THEN: คาดหวังว่าจะได้รับ 400 Bad Request พร้อมข้อความ error
+    assert response.status_code == 400
+    assert response.is_json
+    
+    error_messages = response.json.get("messages", {})
+    assert "year" in error_messages
+    assert "Not a valid integer." in error_messages["year"]
+
+def test_global_400_error_handler(client):
+    """
+    [Unit Test] ทดสอบ Global error handler สำหรับ 400 Bad Request
+    เพื่อเพิ่ม Coverage ให้กับ @app.errorhandler(400)
+    """
+    # WHEN: เรียก endpoint ที่เราสร้างขึ้นเพื่อบังคับให้เกิด Error 400
+    response = client.get('/_test_400_error')
+
+    # THEN: ตรวจสอบว่า Global error handler ของเราทำงานถูกต้อง
+    assert response.status_code == 400
+    assert response.is_json
+    assert response.json['error'] == 'Bad Request'

@@ -1,5 +1,5 @@
 import json
-from flask import (jsonify, render_template,
+from flask import (jsonify, render_template,abort,
                    request, url_for, flash, redirect, Response, send_from_directory, current_app)
 
 
@@ -8,7 +8,12 @@ from app import app
 from app import db
 from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
     ProjectSupervisor, ProjectCategory, ProjectFileType, Admin, ProjectStudent, ProjectDegree
+from .schemas import ProjectSearchSchema
 
+@app.route('/_test_400_error')
+def test_400_error():
+    abort(400)
+    
 @app.errorhandler(400)
 def bad_request_error(error):
    
@@ -34,7 +39,14 @@ def db_connection():
 
 @app.route('/api/projects', methods=['POST'])
 def query_projects():
-    data = request.json or {}
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({"error": "Bad Request", "messages": "Invalid JSON format."}), 400
+
+    schema = ProjectSearchSchema()
+    errors = schema.validate(data)
+    if errors:
+        return jsonify({"error": "Bad Request", "messages": errors}), 400
     query = Project.query
 
     #filter
