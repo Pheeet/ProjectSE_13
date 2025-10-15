@@ -252,6 +252,7 @@ const typeColors = ['#42A5F5','#66BB6A','#FFA726','#AB47BC','#EC407A','#26C6DA']
 
 const lineBarOptions = computed(() => ({
   responsive: true,
+  maintainAspectRatio: false,
   plugins: { legend: { labels: { color: TEXT.value } }, datalabels: { display: false } },
   scales: {
     x: { ticks: { color: TEXT.value }, grid: { color: GRID.value } },

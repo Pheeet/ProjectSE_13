@@ -310,6 +310,10 @@ input::placeholder {
     height: 160px;
 }
 
+.chart.wide {
+    height: 220px;
+}
+
 
 /* KPI cards */
 
