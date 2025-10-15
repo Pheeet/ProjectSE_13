@@ -176,8 +176,8 @@ a:hover {
 /* ========== Layout helpers ========== */
 
 .container {
-    max-width: min(1600px, 96vw);
-    margin: 0 auto;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .panel {
@@ -186,6 +186,23 @@ a:hover {
     border-radius: 14px;
     padding: 14px;
     box-shadow: var(--elev-1);
+}
+
+.panel .related-table-container {
+    max-height: 200px; /* กำหนดความสูงสูงสุด: ประมาณ 4 แถว (แถวละ 40-50px) */
+    overflow-y: auto; /* ทำให้เกิด Scrollbar ในแนวตั้งเมื่อเกินความสูง */
+    margin-top: 8px; /* เพิ่มระยะห่างจากหัวข้อเล็กน้อย */
+}
+
+.related-table-container table {
+    width: 100%; /* ยืนยันความกว้าง */
+}
+
+.related-table-container thead th {
+    position: sticky;
+    top: 0;
+    background: var(--panel); /* ให้ background เป็นสี panel เพื่อปิดเนื้อหาด้านล่าง */
+    z-index: 10;
 }
 
 .small {
@@ -313,6 +330,7 @@ input::placeholder {
     grid-template-columns: 360px 1fr;
     gap: 14px;
     margin: 14px;
+    height: calc(100% - 28px);
 }
 
 .sidebar {
@@ -321,26 +339,26 @@ input::placeholder {
     gap: 20px;
 }
 
-.sidebar input:not([type]) {
-    height: 48px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-/*
-.sidebar input[type="text"],
-.sidebar input:not([type]) {
-    height: 48px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+.sidebar input:not([type]),
+.sidebar select {
+    width: 100%;
+    box-sizing: border-box; 
+    height: 40px;
+    padding: 10px 12px;
 }
-*/
 
 .toolbar {
     display: flex;
     gap: 8px;
     align-items: center;
 }
+
 
 .toolbar input {
     width: 50%;

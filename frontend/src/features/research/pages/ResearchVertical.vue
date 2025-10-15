@@ -2,14 +2,20 @@
   <section class="container">
     <div class="layout">
       <!-- SIDEBAR FILTERS -->
-      <aside class="panel sidebar">
+    <aside class="panel sidebar">
+      <div class="filter-group">
         <div class="small">ค้นหา</div>
         <input v-model="state.query" placeholder="ค้นหาคำหลัก (ไทย/อังกฤษ)" />
         <div class="small">ปี</div>
-        <select v-model="state.yearStart">
-          <option value="">ทุกปี</option>
-          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-        </select>
+        <div class="toolbar">
+            <select v-model="state.yearStart" style="flex:1"> <option value="">ตั้งแต่ปี</option>
+                <option v-for="y in years" :key="'start-'+y" :value="y">{{ y }}</option>
+            </select>
+            <select v-model="state.yearEnd" style="flex:1"> <option value="">ถึงปี</option>
+                <option v-for="y in years" :key="'end-'+y" :value="y">{{ y }}</option>
+            </select>
+          </div>
+        </div>
         <div class="small">Category</div>
         <select v-model="state.category">
           <option value="">ทุก Category</option>
@@ -42,12 +48,10 @@
           <!-- LIST -->
           <div class="card">
             <div class="small">ผลการค้นหา</div>
-            <div v-if="!results.length" class="result-item small">— ไม่พบผลลัพธ์ตามตัวกรอง
-            </div>
             <div class="result-list">
-              <div v-if="!hasSearched" class="result-item" style="text-align:center; padding: 100px 10px;">
-              <strong>คลิก 'ค้นหา' เพื่อเริ่มค้นหาข้อมูล</strong>
-            </div>
+              <div v-if="!results.length" class="result-item small" style="text-align:center; padding: 100px 10px;">
+                — ไม่พบผลลัพธ์ตามตัวกรอง
+              </div>
 
               <!-- ITEM -->
               <div
@@ -105,27 +109,27 @@
 
         <!-- TABLE -->
         <div class="panel" style="margin-top:14px">
-          <div class="small">งานวิจัยที่ใกล้เคียง</div>
-          <table class="table">
-            <thead><tr>
-              <th style="width:34%">ชื่อเรื่อง</th><th>ปี</th><th>Category</th><th>Type</th><th>Degree</th><th>Advisor</th>
-            </tr></thead>
-            <tbody>
-              <tr v-if="!selected"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— เลือกงานวิจัยจากด้านบนเพื่อดูงานวิจัยที่ใกล้เคียง</td></tr>
-              <tr v-else-if="!relatedResults.length"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— ไม่พบงานวิจัยที่ใกล้เคียงตามตัวกรองทั้งหมด</td></tr>
-              <tr v-for="r in relatedResults" :key="'t-'+r.id">
-                <td>{{ r.title }}</td>
-                <td>{{ r.year }}</td>
-                <td>{{ r.category }}</td>
-                <td><span class="badge">{{ r.type }}</span></td>
-                <td>{{ r.degree || '—' }}</td>
-                <td>{{ r.advisor }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="small">งานวิจัยที่เกี่ยวข้อง</div>
+            <div class="related-table-container"> 
+            <table class="table">
+              <thead><tr>
+                <th style="width:34%">ชื่อเรื่อง</th><th>ปี</th><th>Category</th><th>Type</th><th>Degree</th><th>Advisor</th>
+              </tr></thead>
+              <tbody>
+                <tr v-if="!selected"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— เลือกงานวิจัยจากด้านบนเพื่อดูงานวิจัยที่เกี่ยวข้อง</td></tr>
+                <tr v-else-if="!relatedResults.length"><td colspan="6" class="small" style="color:#8b9099; text-align:center;">— ไม่พบงานวิจัยที่เกี่ยวข้องตามตัวกรองทั้งหมด</td></tr>
+                <tr v-for="r in relatedResults" :key="'t-'+r.id">
+                  <td>{{ r.title }}</td>
+                  <td>{{ r.year }}</td>
+                  <td>{{ r.category }}</td>
+                  <td><span class="badge">{{ r.type }}</span></td>
+                  <td>{{ r.degree || '—' }}</td>
+                  <td>{{ r.advisor }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <div class="footer">Research</div>
       </section>
     </div>
   </section>
@@ -136,13 +140,11 @@ import { reactive, ref, onMounted, computed } from 'vue'
 import { getFacets, searchPublications } from '@/services/search.service.js'
 
 const facets = getFacets()
-let state = reactive({ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'' })
+let state = reactive({ query:'', advisor:'', category:'', type:'', degree:'', yearStart:'', yearEnd:'' })
 let results = ref([])
 let loading = ref(false)
 let selected = ref(null)
 
-// สถานะเริ่มต้น
-let hasSearched = ref(false)
 let allResearchItems = ref([]) // เก็บงานวิจัยทั้งหมด (ไม่ถูกกรองด้วย sidebar)
 let initialDataLoaded = ref(false) // สถานะเพื่อโหลดข้อมูลทั้งหมดแค่ครั้งเดียว
 
@@ -186,7 +188,7 @@ function applyFilters(rows){
   const y2 = Number(state.yearEnd)||9999
   return rows.filter(r=>{
     if(q && !(r.title.toLowerCase().includes(q) || (r.abstract||'').toLowerCase().includes(q))) return false
-    if(state.yearStart && Number(r.year) !== Number(state.yearStart)) return false
+    if(Number(r.year) < y1 || Number(r.year) > y2) return false
     if(state.category && r.category !== state.category) return false
     if(state.type && r.type !== state.type) return false
     if(state.degree && r.degree !== state.degree) return false
@@ -229,7 +231,7 @@ function openLink(url){
   window.open(url, '_blank', 'noopener')
 }
 
-onMounted(reset)
+onMounted(runSearch)
 </script>
 
 <style scoped>
