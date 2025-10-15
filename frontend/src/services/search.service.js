@@ -13,7 +13,7 @@ function normalizeItem(p = {}) {
         id: String(p.projectID ?? p.id ?? ''),
         title: p.project_name ?? p.title ?? '',
         abstract: p.description ?? p.abstract ?? '',
-        year: String(p.year ?? ''),
+        year: Number(p.year ?? ''),
 
         // arrays
         categories,
@@ -124,7 +124,7 @@ async function initFacets() {
             categories: uniq(items.map(r => r.category)),
             types: uniq(items.map(r => r.type)),
             degrees: uniq(items.map(r => r.degree)),
-            years: uniq(items.map(r => String(r.year))),
+            years: uniq(items.map(r => Number(r.year))),
             keywords: uniq(items.map(r => r.title)).slice(0, 30),
         })
     } catch (e) {
