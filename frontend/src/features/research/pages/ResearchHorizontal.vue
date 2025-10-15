@@ -58,23 +58,28 @@
       <!-- LEFT COLUMN -->
       <div>
         <div class="grid-kpi">
-          <div class="kpi">
-            <div class="l">ผลงานทั้งหมด</div>
-            <div class="n">{{ results.length }}</div>
-          </div>
-          <div class="kpi">
-            <div class="l">ปีล่าสุด</div>
-            <div class="n">{{ latestYear || '—' }}</div>
-          </div>
-          <div class="kpi">
-            <div class="l">204499</div>
-            <div class="n">{{ results.filter(r=>r.type==='204499').length }}</div>
-          </div>
-          <div class="kpi">
-            <div class="l">Co-operative</div>
-            <div class="n">{{ results.filter(r=>r.type==='Co-operative').length }}</div>
-          </div>
+      <div class="kpi">
+        <div class="l">ผลงานทั้งหมด</div>
+        <div class="n">{{ results.length }}</div>
+      </div>
+      <div class="kpi">
+        <div class="l">ปีล่าสุด</div>
+        <div class="n">{{ latestYear || '—' }}</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Most Active Degree</div>
+        <div class="n">{{ categoryInsights.topDegree || '—' }}</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Most Popular Category</div>
+        <div class="n">
+          <template v-if="categoryInsights.topCategory">
+            {{ categoryInsights.topCategory }}
+          </template>
+          <template v-else>—</template>
         </div>
+      </div>
+    </div>
 
         <div class="panel" style="margin-top:14px">
           <div class="small">ตารางผลงานล่าสุด</div>
@@ -246,6 +251,36 @@ function reset() {
 const latestYear = computed(() =>
   results.reduce((m, r) => Math.max(m, Number(r.year) || 0), 0)
 )
+
+const categoryInsights = computed(() => {
+  const categoryCounts = {}
+  const degreeCounts = {}
+
+  results.forEach(r => {
+    const categoryKey = (r.category && r.category.trim()) || 'Uncategorized'
+    categoryCounts[categoryKey] = (categoryCounts[categoryKey] || 0) + 1
+
+    const degreeKey = (r.degree && r.degree.trim()) || 'Unspecified'
+    degreeCounts[degreeKey] = (degreeCounts[degreeKey] || 0) + 1
+  })
+
+  const sortEntries = (entries) => entries.sort((a, b) => {
+    if (b[1] === a[1]) return a[0].localeCompare(b[0])
+    return b[1] - a[1]
+  })
+
+  const categoryEntries = sortEntries(Object.entries(categoryCounts))
+  const degreeEntries = sortEntries(Object.entries(degreeCounts))
+  const topDegreeName = degreeEntries[0]?.[0]
+
+  return {
+    totalCategories: categoryEntries.length,
+    topCategory: categoryEntries[0]?.[0] || '',
+    topCategoryCount: categoryEntries[0]?.[1] || 0,
+    topDegree: topDegreeName && topDegreeName !== 'Unspecified' ? topDegreeName : '',
+    topDegreeCount: degreeEntries[0]?.[1] || 0
+  }
+})
 
 /* ---- Charts ---- */
 const typeColors = ['#42A5F5','#66BB6A','#FFA726','#AB47BC','#EC407A','#26C6DA']
