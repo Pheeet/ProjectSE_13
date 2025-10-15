@@ -10,19 +10,18 @@ function normalizeItem(p = {}) {
     const supervisors = Array.isArray(p.supervisors) ? p.supervisors : []
 
     return {
-        id: String(p.projectID ?? p.id ?? ''),
-        title: p.project_name ?? p.title ?? '',
-        abstract: p.description ?? p.abstract ?? '',
-        year: Number(p.year ?? ''),
+        id: String(p.projectID || p.id || ''),
+        title: p.project_name || p.title || '',
+        abstract: p.description || p.abstract || '',
+        year: Number(p.year || ''),
 
         // arrays
         categories,
         filetypes,
         degrees,
         supervisors,
-        authors: Array.isArray(p.students)
-            ? p.students.map(s => `${s.firstname ?? ''} ${s.lastname ?? ''}`.trim())
-            : [],
+        authors: Array.isArray(p.students) ?
+            p.students.map(s => `${s.firstname ?? ''} ${s.lastname ?? ''}`.trim()) : [],
 
         // singles (สำหรับ UI เดิม)
         category: categories[0] || '',
@@ -43,11 +42,11 @@ function normalizeItem(p = {}) {
 export async function searchPublications(params = {}) {
     const {
         query = '',
-        advisor = '',
-        category = '',
-        year = '',
-        type = '',
-        degree = ''
+            advisor = '',
+            category = '',
+            year = '',
+            type = '',
+            degree = ''
     } = params
 
     const body = {}
