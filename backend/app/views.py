@@ -2,8 +2,8 @@ import json
 from flask import (jsonify, render_template,abort,
                    request, url_for, flash, redirect, Response, send_from_directory, current_app)
 
-
-from sqlalchemy.sql import text
+from datetime import datetime
+from sqlalchemy.sql import text,func
 from app import app
 from app import db
 from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
@@ -142,6 +142,12 @@ def get_facets():
         .limit(30)
         .all()
     ]
+    min_year_scalar = db.session.query(func.min(Project.year)).scalar()
+    max_year_scalar = db.session.query(func.max(Project.year)).scalar()
+
+    default_year = datetime.now().year # fallback
+    min_year = min_year_scalar if min_year_scalar is not None else default_year
+    max_year = max_year_scalar if max_year_scalar is not None else default_year
 
     return jsonify({
         "advisors": advisors,
@@ -149,7 +155,9 @@ def get_facets():
         "types": types_,
         "degrees": degrees,
         "years": years,
-        "keywords": keywords
+        "keywords": keywords,
+        "minYear": min_year,  # 👈 เพิ่ม
+        "maxYear": max_year
     })
 
 @app.route('/files/<path:filename>')

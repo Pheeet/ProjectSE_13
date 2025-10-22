@@ -44,7 +44,8 @@ export async function searchPublications(params = {}) {
         query = '',
             advisor = '',
             category = '',
-            year = '',
+            yearStart = '',
+            yearEnd = '',
             type = '',
             degree = ''
     } = params
@@ -56,10 +57,12 @@ export async function searchPublications(params = {}) {
     if (category) body.categories = [category]
     if (type) body.filetypes = [type]
     if (degree) body.degrees = [degree]
-    if (year) {
-        const y = parseInt(String(year), 10)
-        if (!Number.isNaN(y)) body.year = y
-    }
+    const start = yearStart ? parseInt(String(yearStart), 10) : null;
+    const end = yearEnd ? parseInt(String(yearEnd), 10) : null;
+
+    if (start && end && start === end && !Number.isNaN(start)) {
+        body.year = start; // ส่งเป็น year เดียว ถ้าปีเริ่มต้นและสิ้นสุดเหมือนกัน
+    } else {}
 
     try {
         const res = await fetch(`${API_BASE}/projects`, {
@@ -84,7 +87,9 @@ const facetsStore = reactive({
     types: [],
     degrees: [],
     years: [],
-    keywords: []
+    keywords: [],
+    minYear: new Date().getFullYear() - 5, 
+    maxYear: new Date().getFullYear()
 })
 
 let facetsInitStarted = false
@@ -100,6 +105,9 @@ function setFacets(data = {}) {
     facetsStore.degrees = clean(data.degrees).sort(sortAlpha)
     facetsStore.years = clean(data.years).sort((a, b) => Number(b) - Number(a)) // new → old
     facetsStore.keywords = clean(data.keywords)
+
+    facetsStore.minYear = Number(data.minYear) || facetsStore.minYear
+    facetsStore.maxYear = Number(data.maxYear) || facetsStore.maxYear
 }
 
 async function initFacets() {
@@ -118,13 +126,27 @@ async function initFacets() {
     // 2️⃣ fallback: ดึงทั้งหมดจาก projects แล้ว derive facets เอง
     try {
         const { items } = await searchPublications({})
+
+        // 👇 [FIX 2] เพิ่มการคำนวณ min/max ในส่วน fallback
+        const allYears = uniq(items.map(r => Number(r.year))).filter(y => y > 1900) // กรองปีที่ถูกต้อง
+
+        const minYearFallback = allYears.length
+            ? Math.min(...allYears)
+            : facetsStore.minYear // ใช้ default ถ้าไม่มีข้อมูล
+
+        const maxYearFallback = allYears.length
+            ? Math.max(...allYears)
+            : facetsStore.maxYear // ใช้ default ถ้าไม่มีข้อมูล
+
         setFacets({
             advisors: uniq(items.map(r => r.advisor)),
             categories: uniq(items.map(r => r.category)),
             types: uniq(items.map(r => r.type)),
             degrees: uniq(items.map(r => r.degree)),
-            years: uniq(items.map(r => Number(r.year))),
+            years: allYears.sort((a, b) => b - a), // ใช้ปีที่คำนวณแล้ว
             keywords: uniq(items.map(r => r.title)).slice(0, 30),
+            minYear: minYearFallback, // 👈 ส่ง min ที่คำนวณได้
+            maxYear: maxYearFallback  // 👈 ส่ง max ที่คำนวณได้
         })
     } catch (e) {
         console.error('initFacets fallback failed:', e)

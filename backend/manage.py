@@ -194,7 +194,7 @@ def seed_db():
             project_name="Anomaly Detection on Campus Network",
             description="วิเคราะห์ทราฟฟิกเครือข่ายเพื่อหาพฤติกรรมผิดปกติ",
             view=40,
-            year=2025,
+            year=2005,
             expire_after=date(2026,12,31),
             file_path="/files/mock3.pdf"
         ),
