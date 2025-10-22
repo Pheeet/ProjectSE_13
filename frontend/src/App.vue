@@ -10,8 +10,8 @@
 
       <!-- ปุ่มสลับธีม (มุมขวาบน) -->
       <button class="theme-toggle" @click="toggleTheme" aria-label="Toggle theme">
-        <span class="only-dark">🌞 Light</span>
-        <span class="only-light">🌙 Dark</span>
+        <span class="only-dark">Light</span>
+        <span class="only-light">Dark</span>
       </button>
     </header>
 

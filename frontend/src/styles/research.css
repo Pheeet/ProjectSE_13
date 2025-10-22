@@ -43,6 +43,9 @@
     --c2: #34c759;
     --c3: #ffb020;
     --c4: #ff6b6b;
+    /* Theme toggle */
+    --toggle-text: #8ab4f8;
+    --toggle-text-hover: #c3d6fb;
 }
 
 
@@ -80,6 +83,9 @@
     --c2: #34a853;
     --c3: #fbbc05;
     --c4: #ea4335;
+    /* Theme toggle */
+    --toggle-text: #2563eb;
+    --toggle-text-hover: #1d4ed8;
 }
 
 
@@ -144,7 +150,7 @@ a:hover {
     border-radius: 10px;
     border: 1px solid var(--bd);
     background: var(--panel);
-    color: var(--text);
+    color: var(--toggle-text);
     cursor: pointer;
     font-size: 14px;
     box-shadow: var(--elev-1);
@@ -153,6 +159,8 @@ a:hover {
 
 .theme-toggle:hover {
     background: var(--chip);
+    color: var(--toggle-text-hover);
+    border-color: var(--toggle-text-hover);
     box-shadow: var(--elev-2);
 }
 
