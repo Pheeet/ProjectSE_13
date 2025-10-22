@@ -65,7 +65,7 @@
       </div>
 
       <!-- LEFT COLUMN -->
-      <div>
+      <div class="dashboard-left">
         <div class="grid-kpi">
           <div class="kpi">
             <div class="l">ผลงานทั้งหมด</div>
@@ -123,7 +123,7 @@
       </div>
 
       <!-- RIGHT COLUMN (3 แผนภูมิ) -->
-      <div>
+      <div class="dashboard-right">
         <!-- 1) แนวโน้มรายปี -->
         <div class="panel chart wide" style="grid-column: 1 / 3">
           <div class="small">แนวโน้มผลงานรายปี</div>
