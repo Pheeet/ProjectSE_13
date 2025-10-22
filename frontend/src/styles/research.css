@@ -48,6 +48,10 @@
     --toggle-text-hover: #c3d6fb;
     --filters-bg: #1a1d23;
     --filters-field-bg: #2b3138;
+    --action-export-bg: #4c8dff;
+    --action-export-hover: #6aa0ff;
+    --action-print-bg: #9c7bff;
+    --action-print-hover: #b495ff;
 }
 
 
@@ -90,6 +94,10 @@
     --toggle-text-hover: #1d4ed8;
     --filters-bg: #f9fafb;
     --filters-field-bg: #ffffff;
+    --action-export-bg: #2563eb;
+    --action-export-hover: #1d4ed8;
+    --action-print-bg: #7c3aed;
+    --action-print-hover: #6d28d9;
 }
 
 
@@ -337,17 +345,21 @@ button.ghost {
 }
 
 .filters .btn.export {
-    background: var(--pri);
+    background: var(--action-export-bg);
     color: #ffffff;
 }
 
 .filters .btn.print {
-    background: var(--acc);
+    background: var(--action-print-bg);
     color: #ffffff;
 }
 
+.filters .btn.export:hover {
+    background: var(--action-export-hover);
+}
+
 .filters .btn.print:hover {
-    filter: brightness(1.05);
+    background: var(--action-print-hover);
 }
 
 .input,
