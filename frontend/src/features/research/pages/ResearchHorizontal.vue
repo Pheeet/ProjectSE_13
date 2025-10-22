@@ -204,14 +204,20 @@ let state = reactive({
 });
 
 // 1. เฝ้าดูค่า minYear จาก service
-watch(() => facets.minYear, (newMinYear) => {
-  state.yearStart = newMinYear;
-});
+watch(
+  () => facets.minYear,
+  (newMinYear) => {
+    state.yearStart = newMinYear;
+  }
+);
 
 // 2. เฝ้าดูค่า maxYear จาก service
-watch(() => facets.maxYear, (newMaxYear) => {
-  state.yearEnd = newMaxYear;
-});
+watch(
+  () => facets.maxYear,
+  (newMaxYear) => {
+    state.yearEnd = newMaxYear;
+  }
+);
 
 let results = reactive([]);
 
@@ -439,24 +445,60 @@ const chartYearData = computed(() => {
 
 /* 2) สัดส่วนประเภทผลงาน (radius 82% เพื่อย่อวงกลม) */
 const chartTypeData = computed(() => {
-  const labels =
-    facets.types && facets.types.length
-      ? facets.types
-      : ["204499", "Co-operative", "Other Type"];
+  const colorMap = new Map();
+  let hueCounter = 15; // ค่าสีเริ่มต้น (Hue) สำหรับการสร้างสีใหม่
+
+  (facets.types || []).forEach((type, index) => {
+    if (index < typeColors.length) {
+      // ใช้ 6 สีหลักจนกว่าจะหมด
+      colorMap.set(type, typeColors[index]);
+    } else {
+      // ถ้าสีหลักหมด ให้สร้างสี HSL ใหม่
+      // ใช้ S=80%, L=65% (สด, สว่าง)
+      const newColor = `hsl(${hueCounter}, 80%, 65%)`;
+      colorMap.set(type, newColor);
+
+      // หมุน Hue ไป 41 องศา (เป็น prime-like number)
+      // เพื่อให้สีที่ได้รอบต่อไปไม่ใกล้กับสีเดิม
+      hueCounter = (hueCounter + 41) % 360;
+    }
+  });
+
+  // 2. นับเฉพาะที่กรองแล้ว
   const counts = {};
   results.forEach((r) => {
-    counts[r.type] = (counts[r.type] || 0) + 1;
+    const type = r.type || "Unknown"; // จัดการกับ type ที่ไม่มีชื่อ
+    counts[type] = (counts[type] || 0) + 1;
   });
-  const data = labels.map((t, i) => counts[t] ?? [12, 5, 8][i] ?? 0);
+
+  const labels = [];
+  const data = [];
+  const backgroundColors = [];
+
+  for (const [label, count] of Object.entries(counts)) {
+    if (count > 0) {
+      // เอาเฉพาะที่มีข้อมูล
+      labels.push(label);
+      data.push(count);
+
+      //ดึงสีที่ถูกต้องจาก "แผนที่สี"
+      let color = colorMap.get(label);
+      if (!color) {
+        color = `hsl(${hueCounter}, 70%, 55%)`;
+        hueCounter = (hueCounter + 41) % 360;
+        colorMap.set(label, color);
+      }
+      backgroundColors.push(color);
+    }
+  }
+
   return {
     labels,
     datasets: [
       {
         data,
-        radius: "82%", // 👈 ย่อวงกลมลงเล็กน้อย
-        backgroundColor: labels.map(
-          (_, i) => typeColors[i % typeColors.length]
-        ),
+        radius: "82%",
+        backgroundColor: backgroundColors,
       },
     ],
   };
