@@ -315,7 +315,7 @@ const relatedResults = computed(() => {
 
 const currentYear = new Date().getFullYear();
 const years = computed(() => {
-  const list = [""];
+  const list = [];
   const min = facets.minYear;
   const max = facets.maxYear;
 

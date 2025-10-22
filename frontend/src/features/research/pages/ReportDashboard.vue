@@ -9,31 +9,27 @@
           style="min-width: 240px"
         />
 
-        <span class="small">ปีตั้งแต่:</span>
-        <input
-          v-model.number="state.yearStart"
-          type="number"
-          style="width: 110px"
-          :min="MIN_YEAR"
-          :max="MAX_YEAR"
-          step="1"
-          @keypress="blockMinus"
-          @input="clampStart"
-          @blur="clampStart"
-        />
+        <div class="filter-year">
+          <label class="small" for="yearStart">ปีตั้งแต่:</label>
+          <select
+            id="yearStart"
+            v-model.number="state.yearStart"
+            @change="clampStart"
+          >
+            <option v-for="y in yearOptions" :key="'y1-' + y" :value="y">
+              {{ y }}
+            </option>
+          </select>
+        </div>
 
-        <span class="small">ถึง:</span>
-        <input
-          v-model.number="state.yearEnd"
-          type="number"
-          style="width: 110px"
-          :min="MIN_YEAR"
-          :max="MAX_YEAR"
-          step="1"
-          @keypress="blockMinus"
-          @input="clampEnd"
-          @blur="clampEnd"
-        />
+        <div class="filter-year">
+          <label class="small" for="yearEnd">ถึง:</label>
+          <select id="yearEnd" v-model.number="state.yearEnd" @change="clampEnd">
+            <option v-for="y in yearOptions" :key="'y2-' + y" :value="y">
+              {{ y }}
+            </option>
+          </select>
+        </div>
 
         <select v-model="state.category">
           <option value="">ทุก Category</option>
@@ -234,6 +230,14 @@ watch(
 );
 
 let results = reactive([]);
+const yearOptions = computed(() => {
+  const min = MIN_YEAR.value;
+  const max = MAX_YEAR.value;
+  if (!min || !max) return [];
+  const list = [];
+  for (let y = min; y <= max; y++) list.push(y);
+  return list;
+});
 
 /* ====== THEME-AWARE COLORS (อ่านจาก CSS variables) ====== */
 const TEXT = ref("#e8eaed");

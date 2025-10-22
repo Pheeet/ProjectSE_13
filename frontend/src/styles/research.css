@@ -377,6 +377,18 @@ input::placeholder {
     min-width: 150px;
 }
 
+.filters .filter-year {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-width: 160px;
+}
+
+.filters .filter-year select {
+    flex: 0 0 140px;
+}
+
 .filters input:focus,
 .filters select:focus {
     border-color: var(--pri);
