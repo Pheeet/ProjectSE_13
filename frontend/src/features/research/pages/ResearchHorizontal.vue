@@ -188,6 +188,17 @@ ChartJS.register(
 /* Data service */
 import { getFacets, searchPublications } from "@/services/search.service.js";
 
+/* ====== CONFIGURATIONS ====== */
+const TOP_N_ADVISORS = 4; 
+const CSV_EXPORT_COLUMNS = [
+  "title",
+  "year",
+  "type",
+  "degree",
+  "category",
+  "advisor",
+];
+
 /* ====== YEAR LIMITS ====== */
 const facets = getFacets();
 const MIN_YEAR = computed(() => facets.minYear);
@@ -517,7 +528,7 @@ const chartGroupsData = computed(() => {
   // 2. แปลงเป็น Array, เรียงลำดับ, และเอา Top 4
   const sortedAdvisors = Object.entries(counts)
     .sort((a, b) => b[1] - a[1]) // เรียงจากมากไปน้อย
-    .slice(0, 4);
+    .slice(0, TOP_N_ADVISORS);
 
   // เตรียมข้อมูลให้ Chart.js
   const labels = sortedAdvisors.map(entry => entry[0]); 
@@ -536,7 +547,7 @@ const chartGroupsData = computed(() => {
 /* ---- export ---- */
 function exportCSV() {
   if (!results.length) return;
-  const cols = ["title", "year", "type", "degree", "category", "advisor"];
+  const cols = CSV_EXPORT_COLUMNS;
   const head = cols.join(",");
   const esc = (s) => String(s ?? "").replace(/"/g, '""');
   const lines = results

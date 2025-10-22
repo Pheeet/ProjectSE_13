@@ -241,6 +241,24 @@ let selected = ref(null);
 
 let allResearchItems = ref([]); // เก็บงานวิจัยทั้งหมด (ไม่ถูกกรองด้วย sidebar)
 let initialDataLoaded = ref(false); // สถานะเพื่อโหลดข้อมูลทั้งหมดแค่ครั้งเดียว
+/* ====== RELATED RESEARCH SCORING WEIGHTS ====== */
+const SCORE_WEIGHTS = {
+  CONTENT_ABSTRACT: 25, // ค่าน้ำหนักสำหรับเนื้อหา (สูงที่สุด)
+  CATEGORY: 10,
+  TYPE: 5,
+  DEGREE: 3,
+  YEAR: 2,
+  ADVISOR: 1,
+};
+
+function getWordSet(text = "") {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[\s,.;:()\-–—"']+/) // แยกคำด้วยวรรคตอน
+      .filter((word) => word && word.length > 3) // กรองคำสั้นๆ และคำว่างๆ ออก
+  );
+}
 
 const relatedResults = computed(() => {
   if (!selected.value) return [];
@@ -248,22 +266,50 @@ const relatedResults = computed(() => {
   const r = selected.value;
   const allResults = allResearchItems.value;
 
+  // สร้าง Set ของคำจาก Abstract ของงานวิจัยที่ถูกเลือก (ทำครั้งเดียว)
+  const selectedAbstractSet = getWordSet(r.abstract);
+
   const scoredResults = allResults
-    .filter((item) => item.id !== r.id) //เอาตัวเองออก
+    .filter((item) => item.id !== r.id) // เอาตัวเองออก
     .map((item) => {
-      let score = 0;
+      
+      // ดึงค่าจาก SCORE_WEIGHTS
+      let metadataScore = 0;
+      if (item.category === r.category) metadataScore += SCORE_WEIGHTS.CATEGORY;
+      if (item.type === r.type) metadataScore += SCORE_WEIGHTS.TYPE;
+      if (item.degree === r.degree) metadataScore += SCORE_WEIGHTS.DEGREE;
+      if (item.year === r.year) metadataScore += SCORE_WEIGHTS.YEAR;
+      if (item.advisor === r.advisor) metadataScore += SCORE_WEIGHTS.ADVISOR;
 
-      // **เงื่อนไขให้คะแนน**
-      if (item.category === r.category) score += 10;
-      if (item.type === r.type) score += 5;
-      if (item.degree === r.degree) score += 3;
-      if (item.year === r.year) score += 2;
-      if (item.advisor === r.advisor) score += 1;
+      // Content Score (Smarter) 
+      let contentScore = 0;
+      
+      // ถ้างานวิจัยที่เลือกมี abstract
+      if (selectedAbstractSet.size > 0) {
+        // สร้าง Set ของคำจาก abstract ของ item ที่กำลังเปรียบเทียบ
+        const itemAbstractSet = getWordSet(item.abstract);
 
-      return { ...item, score };
+        if (itemAbstractSet.size > 0) {
+          // คำนวณความเหมือน (Jaccard Similarity)
+          const intersection = new Set(
+            [...selectedAbstractSet].filter((x) => itemAbstractSet.has(x))
+          );
+          const union = new Set([...selectedAbstractSet, ...itemAbstractSet]);
+          
+          // (จำนวนคำที่เหมือนกัน / จำนวนคำทั้งหมด) * ค่าน้ำหนัก
+          const jaccard = intersection.size / union.size;
+          contentScore = jaccard * SCORE_WEIGHTS.CONTENT_ABSTRACT;
+        }
+      }
+
+      const totalScore = metadataScore + contentScore;
+      return { ...item, score: totalScore };
     });
+
   const filteredResults = scoredResults.filter((item) => item.score > 0);
+  
   filteredResults.sort((a, b) => b.score - a.score);
+  
   return filteredResults;
 });
 
