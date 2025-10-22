@@ -142,7 +142,7 @@
           class="panel chart wide"
           style="grid-column: 1 / 3; margin-top: 14px"
         >
-          <div class="small">Top Research Groups</div>
+          <div class="small">อาจารย์ที่ปรึกษายอดนิยม</div>
           <Bar :data="chartGroupsData" :options="lineBarOptions" />
         </div>
       </div>
@@ -504,17 +504,34 @@ const chartTypeData = computed(() => {
   };
 });
 
-/* 3) Top Research Groups: mock */
-const chartGroupsData = {
-  labels: ["NLP Lab", "Vision Lab", "IoT Lab", "Security Lab"],
-  datasets: [
-    {
-      label: "จำนวนผลงาน",
-      data: [14, 10, 7, 5],
-      backgroundColor: "#8ab4f8",
-    },
-  ],
-};
+/* 3) อาจารย์ที่ปรึกษายอดนิยม */
+const chartGroupsData = computed(() => {
+
+  // นับจำนวนผลงานของอาจารย์แต่ละคนจาก 'results'
+  const counts = {};
+  results.forEach(r => {
+    const advisor = r.advisor || 'Unknown'; 
+    counts[advisor] = (counts[advisor] || 0) + 1;
+  });
+
+  // 2. แปลงเป็น Array, เรียงลำดับ, และเอา Top 4
+  const sortedAdvisors = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1]) // เรียงจากมากไปน้อย
+    .slice(0, 4);
+
+  // เตรียมข้อมูลให้ Chart.js
+  const labels = sortedAdvisors.map(entry => entry[0]); 
+  const data = sortedAdvisors.map(entry => entry[1]);  
+
+  return {
+    labels: labels,
+    datasets: [{
+      label: 'จำนวนผลงาน',
+      data: data,
+      backgroundColor: '#8ab4f8'
+    }]
+  }
+});
 
 /* ---- export ---- */
 function exportCSV() {
