@@ -61,8 +61,11 @@
           </option>
         </select>
 
-        <button class="ghost btn" @click="reset">ล้างตัวกรอง</button>
-        <button class="primary btn" @click="exportCSV">Export CSV</button>
+        <div class="filters-actions">
+          <button class="ghost btn" @click="reset">ล้างตัวกรอง</button>
+          <button class="primary btn export" @click="exportCSV">Export CSV</button>
+          <button class="primary btn print" @click="printDashboard">Print</button>
+        </div>
       </div>
 
       <!-- LEFT COLUMN -->
@@ -560,6 +563,10 @@ function exportCSV() {
   a.download = "dashboard-alt.csv";
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function printDashboard() {
+  window.print();
 }
 
 /* เริ่มต้นด้วยการ clamp และโหลดข้อมูล */

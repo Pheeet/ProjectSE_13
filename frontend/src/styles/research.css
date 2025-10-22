@@ -46,6 +46,8 @@
     /* Theme toggle */
     --toggle-text: #8ab4f8;
     --toggle-text-hover: #c3d6fb;
+    --filters-bg: #1a1d23;
+    --filters-field-bg: #2b3138;
 }
 
 
@@ -86,6 +88,8 @@
     /* Theme toggle */
     --toggle-text: #2563eb;
     --toggle-text-hover: #1d4ed8;
+    --filters-bg: #f9fafb;
+    --filters-field-bg: #ffffff;
 }
 
 
@@ -140,6 +144,63 @@ a:hover {
     background: var(--bg);
     border-bottom: 1px solid var(--bd);
     backdrop-filter: saturate(120%) blur(4px);
+}
+
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-weight: 700;
+}
+
+.app-brand strong {
+    color: var(--text);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    font-size: 18px;
+}
+
+.app-brand .app-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.app-brand .app-nav a {
+    position: relative;
+    color: var(--text);
+    transition: color .15s ease, transform .15s ease;
+}
+
+.app-brand .app-nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background .2s ease, transform .2s ease;
+    transform: scaleX(.4);
+    transform-origin: center;
+}
+
+.app-brand .app-nav a:hover {
+    color: var(--pri);
+    transform: translateY(-1px);
+}
+
+.app-brand .app-nav a:hover::after,
+.app-brand .app-nav a.router-link-active::after {
+    background: var(--pri);
+    transform: scaleX(1);
+}
+
+.app-brand .app-nav a.router-link-active {
+    color: var(--pri);
 }
 
 .theme-toggle {
@@ -237,7 +298,7 @@ a:hover {
 .btn {
     padding: 10px 12px;
     border: 1px solid var(--bd);
-    background: var(--muted);
+    background: var(--filters-bg);
     color: var(--text);
     border-radius: 10px;
     cursor: pointer;
@@ -259,7 +320,7 @@ a:hover {
 
 button.primary {
     background: var(--pri);
-    color: #0b1220;
+    color: #ffffff;
     border: none;
     font-weight: 800;
     border-radius: 10px;
@@ -275,6 +336,20 @@ button.ghost {
     background: transparent;
 }
 
+.filters .btn.export {
+    background: var(--pri);
+    color: #ffffff;
+}
+
+.filters .btn.print {
+    background: var(--acc);
+    color: #ffffff;
+}
+
+.filters .btn.print:hover {
+    filter: brightness(1.05);
+}
+
 .input,
 .select {
     width: 100%;
@@ -287,6 +362,25 @@ button.ghost {
 
 input::placeholder {
     color: var(--sub);
+}
+
+.filters input,
+.filters select {
+    background: var(--filters-field-bg);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    color: var(--text);
+    box-shadow: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    height: 48px;
+    padding: 0 14px;
+    min-width: 150px;
+}
+
+.filters input:focus,
+.filters select:focus {
+    border-color: var(--pri);
+    box-shadow: 0 0 0 3px var(--pri-weak);
 }
 
 
@@ -304,8 +398,30 @@ input::placeholder {
 .filters {
     grid-column: 1/3;
     display: flex;
-    gap: 8px;
+    gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
+    padding: 20px 24px;
+    background: var(--filters-bg);
+    border: 1px solid var(--bd);
+    border-radius: 16px;
+    box-shadow: var(--elev-1);
+}
+
+.filters-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.filters input[type="number"] {
+    text-align: center;
+}
+
+.filters input[type="text"] {
+    flex: 1 1 320px;
+    min-width: 320px;
 }
 
 .grid-kpi {
