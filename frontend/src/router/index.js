@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ResearchHorizontal from '@/features/research/pages/ResearchHorizontal.vue'
-import ResearchVertical from '@/features/research/pages/ResearchVertical.vue'
+import ReportDashboard from '@/features/research/pages/ReportDashboard.vue'
+import ReportSearch from '@/features/research/pages/ReportSearch.vue'
 
 const routes = [
-    { path: '/', redirect: '/research/horizontal' },
-    { path: '/research/horizontal', component: ResearchHorizontal },
-    { path: '/research/vertical', component: ResearchVertical },
+    { path: '/', redirect: '/research/dashboard' },
+    { path: '/research/dashboard', component: ReportDashboard },
+    { path: '/research/search', component: ReportSearch },
 ]
 
 export default createRouter({

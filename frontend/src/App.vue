@@ -4,8 +4,8 @@
     <header class="app-header">
       <div class="app-brand">
         <strong>CS Research Search</strong>
-        · <router-link to="/research/horizontal">Dashboard</router-link>
-        · <router-link to="/research/vertical">Research</router-link>
+        · <router-link to="/research/dashboard">Dashboard</router-link>
+        · <router-link to="/research/search">Research</router-link>
       </div>
 
       <!-- ปุ่มสลับธีม (มุมขวาบน) -->
