@@ -1,14 +1,16 @@
 import json
 from flask import (jsonify, render_template,abort,
-                   request, url_for, flash, redirect, Response, send_from_directory, current_app)
+                   request, url_for, flash, redirect, Response, send_from_directory, current_app,
+                   make_response)
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.sql import text,func
 from app import app
 from app import db
 from app.models.project import Student, Degree, Project, FileType, Supervisor, Category, \
     ProjectSupervisor, ProjectCategory, ProjectFileType, Admin, ProjectStudent, ProjectDegree
 from .schemas import ProjectSearchSchema
+import jwt
 
 @app.route('/_test_400_error')
 def test_400_error():
@@ -36,6 +38,43 @@ def db_connection():
         return '<h1>db works.</h1>'
     except Exception as e:
         return '<h1>db is broken.</h1>' + str(e)
+
+@app.route('/api/set-session', methods=['POST'])
+def set_session():
+    """
+    Endpoint นี้ถูกเรียกโดย callback.php (ระบบเก่า) [cite: 1-310]
+    เพื่อรับข้อมูล User และสร้าง JWT Token ส่งกลับไป
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify(error="No data provided"), 400
+
+    cmuitaccount = data.get('cmuitaccount')
+    if not cmuitaccount:
+            return jsonify(error="Missing cmuitaccount"), 400
+
+    payload = {
+        'cmuitaccount': cmuitaccount,
+        'firstname_TH': data.get('firstname_TH'),
+        'lastname_TH': data.get('lastname_TH'),
+        'organization': data.get('organization'),
+        'student_id': data.get('student_id'),
+        'exp': datetime.utcnow() + timedelta(minutes=15) # 👈 Token หมดอายุ 15 นาที
+    }
+
+    try:
+        token = jwt.encode(
+            payload,
+            app.config['SECRET_KEY'], # (ดึงมาจาก __init__.py)
+            algorithm="HS256"
+        )
+        # ส่ง Token กลับไปให้ PHP
+        return jsonify(token=token)
+    
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+
 
 @app.route('/api/projects', methods=['POST'])
 def query_projects():
@@ -164,3 +203,56 @@ def get_facets():
 def uploaded_file(filename):
     # ใช้ send_from_directory เพื่อส่งไฟล์จาก path ที่เราตั้งค่าไว้ใน config
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+# ที่ด้านล่างของ views.py
+
+@app.route('/api/all-data')
+def get_all_data():
+    """
+    ดึงข้อมูลทั้งหมดจากตารางหลักๆ เพื่อยืนยันว่า Database และ Model ทำงานได้
+    """
+    try:
+        # 1. ดึงข้อมูล Project ทั้งหมด
+        all_projects = Project.query.all()
+        projects_result = [{
+            "projectID": p.projectID,
+            "project_name": p.project_name,
+            "year": p.year,
+            "description_length": len(p.description) if p.description else 0
+        } for p in all_projects]
+
+        # 2. ดึงข้อมูล Student ทั้งหมด
+        all_students = Student.query.all()
+        students_result = [{
+            "stu_id": s.stu_id,
+            "firstname": s.firstname,
+            "lastname": s.lastname,
+            "email": s.email
+        } for s in all_students]
+
+        # 3. ดึงข้อมูล Supervisor ทั้งหมด
+        all_supervisors = Supervisor.query.all()
+        supervisors_result = [{
+            "supervisorID": s.supervisorID,
+            "name": s.name
+        } for s in all_supervisors]
+
+        return jsonify({
+            "status": "success",
+            "projects_count": len(projects_result),
+            "students_count": len(students_result),
+            "supervisors_count": len(supervisors_result),
+            "data_preview": {
+                "projects": projects_result[:10], # แสดงแค่ 10 รายการแรก
+                "students": students_result[:10],
+                "supervisors": supervisors_result[:10]
+            }
+        })
+
+    except Exception as e:
+        # หาก Query ล้มเหลว (เช่น ตารางหาย, UndefinedTable)
+        return jsonify({
+            "status": "error", 
+            "message": "Database Query Failed", 
+            "details": str(e)
+        }), 500

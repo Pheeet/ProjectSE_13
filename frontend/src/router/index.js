@@ -8,6 +8,9 @@ const routes = [
     { path: '/research/search', component: ReportSearch },
 ]
 
+
+
+
 export default createRouter({
     history: createWebHistory(),
     routes,

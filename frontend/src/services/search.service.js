@@ -1,6 +1,57 @@
 import { reactive } from 'vue'
 
-const API_BASE = '/api'
+const API_BASE = 'http://localhost:56732/api'
+
+
+async function fetchApi(url, options = {}) {
+    try {
+        // 2.1) ตั้งค่า Default ที่จำเป็นสำหรับทุก Request
+        const defaultOptions = {
+            method: options.method || 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+            // ⚠️ 2.2) สำคัญมาก: สั่งให้ส่ง Cookie (jwt_token) ไปด้วย
+            credentials: 'include',
+        }
+
+        if (options.body) {
+            defaultOptions.body = options.body
+        }
+
+        // 2.3) ยิง Request
+        const res = await fetch(`${API_BASE}${url}`, defaultOptions)
+
+        // ⚠️ 2.4) ดักจับ 401 (Unauthorized) ที่นี่!
+        if (res.status === 401) {
+            console.warn('Fetch 401: ไม่ได้ล็อกอิน หรือ Token หมดอายุ')
+            const data = await res.json()
+
+            if (data.login_url) {
+                console.log('Backend สั่งให้ไปที่:', data.login_url);
+                window.location.href = data.login_url
+            }
+
+            // ⚠️ "หยุด" การทำงานทั้งหมด (ห้าม Throw Error)
+            // ต้องเป็นบรรทัดนี้เท่านั้น
+            return new Promise(() => { }); // 👈 เช็กว่าแก้เป็นอันนี้หรือยัง
+        }
+
+        // ถ้าไม่ใช่ 401 แต่ Error อื่น
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status} ${res.statusText}`)
+        }
+
+        // ถ้าทุกอย่าง OK
+        return res.json()
+
+    } catch (error) {
+        console.error(`fetchApi failed for: ${url}`, error)
+        // ส่ง Error ต่อไปให้ฟังก์ชันที่เรียกใช้
+        throw error
+    }
+}
 
 // -------------------- normalize --------------------
 function normalizeItem(p = {}) {
@@ -42,12 +93,12 @@ function normalizeItem(p = {}) {
 export async function searchPublications(params = {}) {
     const {
         query = '',
-            advisor = '',
-            category = '',
-            yearStart = '',
-            yearEnd = '',
-            type = '',
-            degree = ''
+        advisor = '',
+        category = '',
+        yearStart = '',
+        yearEnd = '',
+        type = '',
+        degree = ''
     } = params
 
     const body = {}
@@ -62,16 +113,14 @@ export async function searchPublications(params = {}) {
 
     if (start && end && start === end && !Number.isNaN(start)) {
         body.year = start; // ส่งเป็น year เดียว ถ้าปีเริ่มต้นและสิ้นสุดเหมือนกัน
-    } else {}
+    } else { }
 
     try {
-        const res = await fetch(`${API_BASE}/projects`, {
+        // ⚠️ ลบ fetch(...) 4 บรรทัดบนทิ้งไป
+        const arr = await fetchApi('/projects', { // 👈 1. เหลือไว้แค่อันนี้
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const arr = await res.json()
         const items = Array.isArray(arr) ? arr.map(normalizeItem) : []
         return { items }
     } catch (e) {
@@ -88,7 +137,7 @@ const facetsStore = reactive({
     degrees: [],
     years: [],
     keywords: [],
-    minYear: new Date().getFullYear() - 5, 
+    minYear: new Date().getFullYear() - 5,
     maxYear: new Date().getFullYear()
 })
 
@@ -113,12 +162,9 @@ function setFacets(data = {}) {
 async function initFacets() {
     // 1️⃣ พยายามโหลดจาก /api/facets ก่อน
     try {
-        const res = await fetch(`${API_BASE}/facets`)
-        if (res.ok) {
-            const data = await res.json()
-            setFacets(data)
-            return
-        }
+        const data = await fetchApi('/facets') // (GET request)
+        setFacets(data)
+        return
     } catch (e) {
         console.warn('getFacets API failed, fallback to local derive', e)
     }
