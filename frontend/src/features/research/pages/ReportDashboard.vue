@@ -432,26 +432,76 @@ const pieOptions = computed(() => ({
   elements: { arc: { borderWidth: 1 } },
 }));
 
-/* 1) แนวโน้มรายปี: ตรึงแกน 2021–2025 */
+/* 1) แนวโน้มรายปี: อิงตาม filter และมีขั้นต่ำ 5 ปี (แก้ edge cases) */
 const chartYearData = computed(() => {
-  const baseline = [];
-  if (MIN_YEAR.value && MAX_YEAR.value) {
-    for (let y = MIN_YEAR.value; y <= MAX_YEAR.value; y++) {
-      baseline.push(String(y));
-    }
+  // อ่านปีจาก filter (fallback ไป min/max ถ้าไม่มี)
+  let yStart = Number(state.yearStart) || MIN_YEAR.value || 0;
+  let yEnd = Number(state.yearEnd) || MAX_YEAR.value || 0;
+
+  // ถ้าปีกลับกัน ให้สลับ (safety)
+  if (yEnd < yStart) {
+    const t = yStart;
+    yStart = yEnd;
+    yEnd = t;
   }
 
+  // ปรับให้ไม่เลยขอบ
+  yStart = Math.max(MIN_YEAR.value, yStart);
+  yEnd = Math.min(MAX_YEAR.value, yEnd);
+
+  let yearSpan = yEnd - yStart + 1;
+  const MIN_SPAN = 5;
+
+  if (yearSpan < MIN_SPAN) {
+    const needed = MIN_SPAN - yearSpan;
+
+    // พื้นที่ที่สามารถขยายได้ในแต่ละฝั่ง
+    const availableBefore = Math.max(0, yStart - MIN_YEAR.value);
+    const availableAfter = Math.max(0, MAX_YEAR.value - yEnd);
+
+    // ถ้ามีพื้นที่เพียงพอ ให้พยายามแจกแบบสมดุล
+    if (availableBefore + availableAfter > 0) {
+      // เริ่มด้วยแจกครึ่ง ๆ
+      let expandBefore = Math.min(Math.floor(needed / 2), availableBefore);
+      let expandAfter = Math.min(needed - expandBefore, availableAfter);
+
+      // ถ้าฝั่งหลังยังไม่พอ แต่ฝั่งก่อนยังมีพื้นที่ ให้ชดเชย
+      if (expandBefore + expandAfter < needed) {
+        const remaining = needed - (expandBefore + expandAfter);
+        // พยายามชดเชยจากฝั่งที่เหลือ
+        const extraBefore = Math.min(remaining, availableBefore - expandBefore);
+        expandBefore += extraBefore;
+        const extraAfter = Math.min(remaining - extraBefore, availableAfter - expandAfter);
+        expandAfter += extraAfter;
+      }
+
+      // ถ้ายังไม่พอ (ชิดขอบทั้งสองด้าน) ก็ขยายเท่าที่ทำได้
+      yStart = Math.max(MIN_YEAR.value, yStart - expandBefore);
+      yEnd = Math.min(MAX_YEAR.value, yEnd + expandAfter);
+    }
+    // ถ้าไม่มีพื้นที่ขยายเลย (MIN==MAX) จะคงเดิม
+    yearSpan = yEnd - yStart + 1;
+  }
+
+  // สร้าง baseline ตามช่วงที่ได้
+  const baseline = [];
+  for (let y = yStart; y <= yEnd; y++) baseline.push(String(y));
+
+  // นับจำนวนผลงานใน baseline (results ถูกกรองแล้ว)
   const countByYear = Object.fromEntries(baseline.map((y) => [y, 0]));
   results.forEach((r) => {
-    const y = String(r.year);
-    if (countByYear[y] != null) countByYear[y]++;
+    const yr = Number(r.year);
+    if (!isNaN(yr) && yr >= yStart && yr <= yEnd) {
+      countByYear[String(yr)] = (countByYear[String(yr)] || 0) + 1;
+    }
   });
+
   return {
     labels: baseline,
     datasets: [
       {
         label: "จำนวนผลงาน",
-        data: baseline.map((y) => countByYear[y]),
+        data: baseline.map((y) => countByYear[y] || 0),
         borderColor: "#8ab4f8",
         backgroundColor: "#8ab4f880",
         fill: true,
