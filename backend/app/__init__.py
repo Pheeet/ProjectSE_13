@@ -56,8 +56,6 @@ def check_session_and_slash():
         return
 
     # ⚠️ 2. ADD THIS CHECK: Allow access to the dev-login route without a token
-    if request.path == '/api/dev-login':
-        return # Let the dev_login() function handle it
 
     # --- 3. Authentication check (Original code starts here) ---
     if session.get('user_id'):
@@ -65,7 +63,7 @@ def check_session_and_slash():
 
     else:
         token = request.cookies.get('jwt_token')
-        login_url = 'https://localhost/login.php' # Correct login URL
+        login_url = 'http://localhost/login.php' # Correct login URL
 
         if not token:
             # No token found

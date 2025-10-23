@@ -16,12 +16,6 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - flask-app1_default
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
     #depends_on:
     #  - db
 
@@ -36,12 +30,6 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
   #db:
   #  image: postgres:13-alpine
   #  container_name: new_research_db_dev

@@ -74,7 +74,49 @@ def set_session():
     except Exception as e:
         return jsonify(error=str(e)), 500
 
+# @app.route('/api/dev-login')
+# def dev_login():
+#     """
+#     [ DEV-ONLY ]
+#     นี่คือทางลัดสำหรับล็อกอินในเครื่อง dev
+#     เพราะระบบ login.php (เก่า) [cite: 1-310] เชื่อมต่อ API ภายนอกไม่ได้
+#     """
+#     print("DEV-LOGIN: กำลังสร้าง Fake JWT Token...")
 
+#     # 1. สร้าง Payload (ข้อมูล User ปลอมๆ)
+#     payload = {
+#         'cmuitaccount': 'dev_user_01',
+#         'firstname_TH': 'Test',
+#         'lastname_TH': 'User',
+#         'organization': 'DEV',
+#         'student_id': '0000000',
+#         'exp': datetime.utcnow() + timedelta(hours=1) # 👈 ให้อายุ 1 ชั่วโมง
+#     }
+
+#     # 2. เข้ารหัส Token (ใช้กุญแจลับเดียวกับที่ __init__.py ใช้อยู่)
+#     try:
+#         token = jwt.encode(
+#             payload,
+#             app.config['SECRET_KEY'], 
+#             algorithm="HS256"
+#         )
+
+#         # 3. สร้าง Response และ "ตั้ง Cookie"
+#         # (เราทำสิ่งที่ callback.php ควรจะทำ)
+#         response = make_response(redirect('http://localhost:5173')) # 👈 4. ไปที่แอปใหม่
+#         response.set_cookie(
+#             'jwt_token',
+#             token,
+#             httponly=True,
+#             max_age=3600, # 1 ชั่วโมง
+#             path='/'
+#         )
+#         print("DEV-LOGIN: สร้าง Cookie สำเร็จ! กำลังไปที่แอปใหม่...")
+#         return response
+    
+#     except Exception as e:
+#         return jsonify(error=str(e)), 500
+# # --- ⚠️ สิ้นสุดส่วนที่เพิ่ม ---
 
 @app.route('/api/projects', methods=['POST'])
 def query_projects():
