@@ -9,31 +9,27 @@
           style="min-width: 240px"
         />
 
-        <span class="small">ปีตั้งแต่:</span>
-        <input
-          v-model.number="state.yearStart"
-          type="number"
-          style="width: 110px"
-          :min="MIN_YEAR"
-          :max="MAX_YEAR"
-          step="1"
-          @keypress="blockMinus"
-          @input="clampStart"
-          @blur="clampStart"
-        />
+        <div class="filter-year">
+          <label class="small" for="yearStart">ปีตั้งแต่:</label>
+          <select
+            id="yearStart"
+            v-model.number="state.yearStart"
+            @change="clampStart"
+          >
+            <option v-for="y in yearOptions" :key="'y1-' + y" :value="y">
+              {{ y }}
+            </option>
+          </select>
+        </div>
 
-        <span class="small">ถึง:</span>
-        <input
-          v-model.number="state.yearEnd"
-          type="number"
-          style="width: 110px"
-          :min="MIN_YEAR"
-          :max="MAX_YEAR"
-          step="1"
-          @keypress="blockMinus"
-          @input="clampEnd"
-          @blur="clampEnd"
-        />
+        <div class="filter-year">
+          <label class="small" for="yearEnd">ถึง:</label>
+          <select id="yearEnd" v-model.number="state.yearEnd" @change="clampEnd">
+            <option v-for="y in yearOptions" :key="'y2-' + y" :value="y">
+              {{ y }}
+            </option>
+          </select>
+        </div>
 
         <select v-model="state.category">
           <option value="">ทุก Category</option>
@@ -61,12 +57,15 @@
           </option>
         </select>
 
-        <button class="ghost btn" @click="reset">ล้างตัวกรอง</button>
-        <button class="primary btn" @click="exportCSV">Export CSV</button>
+        <div class="filters-actions">
+          <button class="ghost btn" @click="reset">ล้างตัวกรอง</button>
+          <button class="primary btn export" @click="exportCSV">Export CSV</button>
+          <button class="primary btn print" @click="printDashboard">Print</button>
+        </div>
       </div>
 
       <!-- LEFT COLUMN -->
-      <div>
+      <div class="dashboard-left">
         <div class="grid-kpi">
           <div class="kpi">
             <div class="l">ผลงานทั้งหมด</div>
@@ -124,7 +123,7 @@
       </div>
 
       <!-- RIGHT COLUMN (3 แผนภูมิ) -->
-      <div>
+      <div class="dashboard-right">
         <!-- 1) แนวโน้มรายปี -->
         <div class="panel chart wide" style="grid-column: 1 / 3">
           <div class="small">แนวโน้มผลงานรายปี</div>
@@ -231,6 +230,14 @@ watch(
 );
 
 let results = reactive([]);
+const yearOptions = computed(() => {
+  const min = MIN_YEAR.value;
+  const max = MAX_YEAR.value;
+  if (!min || !max) return [];
+  const list = [];
+  for (let y = min; y <= max; y++) list.push(y);
+  return list;
+});
 
 /* ====== THEME-AWARE COLORS (อ่านจาก CSS variables) ====== */
 const TEXT = ref("#e8eaed");
@@ -425,26 +432,76 @@ const pieOptions = computed(() => ({
   elements: { arc: { borderWidth: 1 } },
 }));
 
-/* 1) แนวโน้มรายปี: ตรึงแกน 2021–2025 */
+/* 1) แนวโน้มรายปี: อิงตาม filter และมีขั้นต่ำ 5 ปี (แก้ edge cases) */
 const chartYearData = computed(() => {
-  const baseline = [];
-  if (MIN_YEAR.value && MAX_YEAR.value) {
-    for (let y = MIN_YEAR.value; y <= MAX_YEAR.value; y++) {
-      baseline.push(String(y));
-    }
+  // อ่านปีจาก filter (fallback ไป min/max ถ้าไม่มี)
+  let yStart = Number(state.yearStart) || MIN_YEAR.value || 0;
+  let yEnd = Number(state.yearEnd) || MAX_YEAR.value || 0;
+
+  // ถ้าปีกลับกัน ให้สลับ (safety)
+  if (yEnd < yStart) {
+    const t = yStart;
+    yStart = yEnd;
+    yEnd = t;
   }
 
+  // ปรับให้ไม่เลยขอบ
+  yStart = Math.max(MIN_YEAR.value, yStart);
+  yEnd = Math.min(MAX_YEAR.value, yEnd);
+
+  let yearSpan = yEnd - yStart + 1;
+  const MIN_SPAN = 5;
+
+  if (yearSpan < MIN_SPAN) {
+    const needed = MIN_SPAN - yearSpan;
+
+    // พื้นที่ที่สามารถขยายได้ในแต่ละฝั่ง
+    const availableBefore = Math.max(0, yStart - MIN_YEAR.value);
+    const availableAfter = Math.max(0, MAX_YEAR.value - yEnd);
+
+    // ถ้ามีพื้นที่เพียงพอ ให้พยายามแจกแบบสมดุล
+    if (availableBefore + availableAfter > 0) {
+      // เริ่มด้วยแจกครึ่ง ๆ
+      let expandBefore = Math.min(Math.floor(needed / 2), availableBefore);
+      let expandAfter = Math.min(needed - expandBefore, availableAfter);
+
+      // ถ้าฝั่งหลังยังไม่พอ แต่ฝั่งก่อนยังมีพื้นที่ ให้ชดเชย
+      if (expandBefore + expandAfter < needed) {
+        const remaining = needed - (expandBefore + expandAfter);
+        // พยายามชดเชยจากฝั่งที่เหลือ
+        const extraBefore = Math.min(remaining, availableBefore - expandBefore);
+        expandBefore += extraBefore;
+        const extraAfter = Math.min(remaining - extraBefore, availableAfter - expandAfter);
+        expandAfter += extraAfter;
+      }
+
+      // ถ้ายังไม่พอ (ชิดขอบทั้งสองด้าน) ก็ขยายเท่าที่ทำได้
+      yStart = Math.max(MIN_YEAR.value, yStart - expandBefore);
+      yEnd = Math.min(MAX_YEAR.value, yEnd + expandAfter);
+    }
+    // ถ้าไม่มีพื้นที่ขยายเลย (MIN==MAX) จะคงเดิม
+    yearSpan = yEnd - yStart + 1;
+  }
+
+  // สร้าง baseline ตามช่วงที่ได้
+  const baseline = [];
+  for (let y = yStart; y <= yEnd; y++) baseline.push(String(y));
+
+  // นับจำนวนผลงานใน baseline (results ถูกกรองแล้ว)
   const countByYear = Object.fromEntries(baseline.map((y) => [y, 0]));
   results.forEach((r) => {
-    const y = String(r.year);
-    if (countByYear[y] != null) countByYear[y]++;
+    const yr = Number(r.year);
+    if (!isNaN(yr) && yr >= yStart && yr <= yEnd) {
+      countByYear[String(yr)] = (countByYear[String(yr)] || 0) + 1;
+    }
   });
+
   return {
     labels: baseline,
     datasets: [
       {
         label: "จำนวนผลงาน",
-        data: baseline.map((y) => countByYear[y]),
+        data: baseline.map((y) => countByYear[y] || 0),
         borderColor: "#8ab4f8",
         backgroundColor: "#8ab4f880",
         fill: true,
@@ -560,6 +617,10 @@ function exportCSV() {
   a.download = "dashboard-alt.csv";
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function printDashboard() {
+  window.print();
 }
 
 /* เริ่มต้นด้วยการ clamp และโหลดข้อมูล */
