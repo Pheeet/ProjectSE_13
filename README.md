@@ -74,3 +74,100 @@ To run this project locally, you need **Docker** and **Docker Compose** installe
 4.  **Access the Application**
     * Frontend: `http://localhost:5173`
     * Backend API: `http://localhost:56732`
+
+### Project Structure
+└── ProjectSE_13
+    ├── .env.dev
+    ├── .gitignore
+    ├── backend
+    │   ├── .coverage
+    │   ├── .pytest_cache
+    │   │   ├── .gitignore
+    │   │   ├── CACHEDIR.TAG
+    │   │   ├── README.md
+    │   │   └── v
+    │   │       └── cache
+    │   │           ├── lastfailed
+    │   │           └── nodeids
+    │   ├── Dockerfile
+    │   ├── Pipfile
+    │   ├── Pipfile.lock
+    │   ├── app
+    │   │   ├── __init__.py
+    │   │   ├── models
+    │   │   │   └── project.py
+    │   │   ├── schemas.py
+    │   │   └── views.py
+    │   ├── gunicorn.config.py
+    │   ├── gunicorn_starter.sh
+    │   ├── htmlcov
+    │   │   ├── .gitignore
+    │   │   ├── class_index.html
+    │   │   ├── coverage_html_cb_6fb7b396.js
+    │   │   ├── favicon_32_cb_58284776.png
+    │   │   ├── function_index.html
+    │   │   ├── index.html
+    │   │   ├── keybd_closed_cb_ce680311.png
+    │   │   ├── status.json
+    │   │   ├── style_cb_6b508a39.css
+    │   │   ├── z_5f5a17c013354698___init___py.html
+    │   │   ├── z_5f5a17c013354698_schemas_py.html
+    │   │   ├── z_5f5a17c013354698_views_py.html
+    │   │   └── z_6c0e4b930745278b_project_py.html
+    │   ├── main.py
+    │   ├── manage.py
+    │   ├── requirements.txt
+    │   ├── tests
+    │   │   ├── __init__.py
+    │   │   ├── conftest.py
+    │   │   ├── test_models.py
+    │   │   └── test_views.py
+    │   └── uploads
+    │       ├── mock1.pdf
+    │       ├── mock2.pdf
+    │       ├── mock3.pdf
+    │       ├── project1.pdf
+    │       ├── project2.zip
+    │       ├── project3.docx
+    │       ├── project4.pdf
+    │       └── project5.zip
+    ├── build_docker.sh
+    ├── docker-compose.yml
+    ├── flask-app1_db_1.session.sql
+    ├── frontend
+    │   ├── .github
+    │   │   └── copilot-instructions.md
+    │   ├── Dockerfile
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── package-lock.json
+    │   ├── package.json
+    │   ├── public
+    │   │   └── vite.svg
+    │   ├── src
+    │   │   ├── App.vue
+    │   │   ├── assets
+    │   │   │   └── vue.svg
+    │   │   ├── features
+    │   │   │   └── research
+    │   │   │       ├── components
+    │   │   │       │   ├── ResultCard.vue
+    │   │   │       │   ├── ResultList.vue
+    │   │   │       │   ├── SearchBar.vue
+    │   │   │       │   ├── TopGroupsBarChart.vue
+    │   │   │       │   ├── TypePieChart.vue
+    │   │   │       │   └── YearTrendChart.vue
+    │   │   │       └── pages
+    │   │   │           ├── ReportDashboard.vue
+    │   │   │           └── ReportSearch.vue
+    │   │   ├── main.js
+    │   │   ├── router
+    │   │   │   └── index.js
+    │   │   ├── services
+    │   │   │   ├── search.service.js
+    │   │   │   └── search.service.spec.js
+    │   │   └── styles
+    │   │       └── research.css
+    │   └── vite.config.js
+    └── run_docker_compose.sh
+
