@@ -172,3 +172,5 @@ To run this project locally, you need **Docker** and **Docker Compose** installe
     │   └── vite.config.js
     └── run_docker_compose.sh
 ```
+
+### โค้ดนี้ยังอยู่ใน development mode จึงยังไม่ได้แก้ไอบางอย่างเช่น ยังไม่ได้ปิด debug, ยังไม่ได้ปรับ .env เป็น development mode, ยังไม่ได้ git ignore upload และ ไฟล์ test ต่างๆ และอื่นๆ
