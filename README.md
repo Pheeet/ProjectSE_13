@@ -76,6 +76,7 @@ To run this project locally, you need **Docker** and **Docker Compose** installe
     * Backend API: `http://localhost:56732`
 
 ### Project Structure
+```
 └── ProjectSE_13
     ├── .env.dev
     ├── .gitignore
@@ -170,4 +171,4 @@ To run this project locally, you need **Docker** and **Docker Compose** installe
     │   │       └── research.css
     │   └── vite.config.js
     └── run_docker_compose.sh
-
+```
